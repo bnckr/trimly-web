@@ -1,0 +1,30 @@
+{
+  "name": "trimly-web",
+  "version": "1.0.0",
+  "description": "**Smart Scheduling Platform for Beauty Professionals**",
+  "main": "next.config.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bnckr/trimly-web.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/bnckr/trimly-web/issues"
+  },
+  "homepage": "https://github.com/bnckr/trimly-web#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.104.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0"
+  }
+}
