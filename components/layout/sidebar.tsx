@@ -15,7 +15,7 @@ export function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <img src="/icons/trimly-icon.png" alt="Trimly" />
+        <img src="/logo/trimly-logo-giant.png" alt="Trimly" />
       </div>
 
       <nav className="sidebar-nav">

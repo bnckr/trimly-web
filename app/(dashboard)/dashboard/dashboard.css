@@ -18,8 +18,8 @@
 }
 
 .sidebar {
-  background: #000000;
-  color: #ffffff;
+  background: #ffffff;
+  color: #000000;
   padding: 28px 22px;
   display: flex;
   flex-direction: column;
@@ -30,7 +30,7 @@
 }
 
 .sidebar-logo img {
-  width: 50px;
+  width: 150px;
   height: auto;
 }
 

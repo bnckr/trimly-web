@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { AppointmentModal } from "@/components/agenda/appointment-modal";
+import { BlockTimeModal } from "@/components/agenda/block-time-modal";
 import "./agenda.css";
 
 type Profile = {
@@ -46,6 +47,7 @@ export default function AgendaPage() {
   const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [showBlockTimeModal, setShowBlockTimeModal] = useState(false);
 
   useEffect(() => {
     async function loadPage() {
@@ -145,7 +147,13 @@ export default function AgendaPage() {
               onChange={(e) => setSelectedDate(e.target.value)}
             />
 
-            <button className="secondary-button">Bloquear horário</button>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => setShowBlockTimeModal(true)}
+            >
+              Bloquear horário
+            </button>
             <button
               className="primary-button"
               onClick={() => {
@@ -228,6 +236,20 @@ export default function AgendaPage() {
         open={showAppointmentModal}
         selectedDate={selectedDate}
         onClose={() => setShowAppointmentModal(false)}
+        onSaved={async () => {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+
+          if (session) {
+            await loadAgenda(session.user.id, selectedDate);
+          }
+        }}
+      />
+      <BlockTimeModal
+        open={showBlockTimeModal}
+        selectedDate={selectedDate}
+        onClose={() => setShowBlockTimeModal(false)}
         onSaved={async () => {
           const {
             data: { session },
