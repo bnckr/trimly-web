@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -97,9 +98,9 @@ export default function LoginPage() {
               </button>
             </div>
 
-            <button type="button" className="forgot-password">
+            <Link href="/recuperar-senha" className="forgot-password">
               Esqueci minha senha!
-            </button>
+            </Link>
 
             {erro ? <p className="login-error">{erro}</p> : null}
 
@@ -108,7 +109,7 @@ export default function LoginPage() {
             </button>
 
             <p className="auth-switch">
-              Ainda não tem conta? <a href="/cadastro">Criar conta</a>
+              Ainda não tem conta? <Link href="/cadastro">Criar conta</Link>
             </p>
           </form>
         </div>

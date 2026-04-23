@@ -1,13 +1,15 @@
 'use client'
 
 import { FormEvent, useState } from 'react'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import '../login/login.css'
 
-export default function RecoverPasswordPage() {
+export default function RecuperarSenhaPage() {
   const [email, setEmail] = useState('')
-  const [mensagem, setMensagem] = useState('')
-  const [erro, setErro] = useState('')
   const [loading, setLoading] = useState(false)
+  const [erro, setErro] = useState('')
+  const [mensagem, setMensagem] = useState('')
 
   async function handleRecover(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -15,37 +17,72 @@ export default function RecoverPasswordPage() {
     setMensagem('')
     setLoading(true)
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email)
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/nova-senha`,
+    })
 
     setLoading(false)
 
     if (error) {
-      setErro('Não foi possível enviar o e-mail de recuperação.')
+      setErro(error.message)
       return
     }
 
-    setMensagem('Se o e-mail existir, o link de recuperação foi enviado.')
+    setMensagem('Se o e-mail estiver cadastrado, enviaremos um link de recuperação.')
   }
 
   return (
-    <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
-      <div style={{ width: '100%', maxWidth: 420 }}>
-        <h1>Recuperar senha</h1>
-        <form onSubmit={handleRecover} style={{ display: 'grid', gap: 12 }}>
-          <input
-            type="email"
-            placeholder="Seu e-mail"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <button type="submit" disabled={loading}>
-            {loading ? 'Enviando...' : 'Enviar link'}
-          </button>
-        </form>
-        {mensagem ? <p>{mensagem}</p> : null}
-        {erro ? <p>{erro}</p> : null}
-      </div>
+    <main className="login-page">
+      <section className="login-card">
+        <div className="login-left">
+          <div className="brand">
+            <img src="/images/trimly-logo.png" alt="Trimly" className="brand-logo" />
+          </div>
+
+          <div className="hero-text">
+            <p className="welcome">Vamos recuperar seu acesso</p>
+
+            <h1>
+              REDEFINA SUA SENHA
+              <br />
+              COM SEGURANÇA.
+            </h1>
+
+            <div className="hero-line" />
+
+            <p className="subtitle">
+              Informe seu e-mail e enviaremos um link para você criar uma nova senha.
+            </p>
+          </div>
+        </div>
+
+        <div className="login-right">
+          <form className="login-form" onSubmit={handleRecover}>
+            <h2>Recuperar senha</h2>
+
+            <div className="input-group">
+              <input
+                type="email"
+                placeholder="E-mail"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            {erro ? <p className="login-error">{erro}</p> : null}
+            {mensagem ? <p className="login-success">{mensagem}</p> : null}
+
+            <button className="login-button" type="submit" disabled={loading}>
+              {loading ? 'ENVIANDO...' : 'ENVIAR LINK'}
+            </button>
+
+            <p className="auth-switch">
+              Lembrou sua senha? <Link href="/login">Entrar</Link>
+            </p>
+          </form>
+        </div>
+      </section>
     </main>
   )
 }
