@@ -1,12 +1,17 @@
 {
   "name": "trimly-web",
   "version": "1.0.0",
+  "private": true,
+  "type": "module",
   "description": "**Smart Scheduling Platform for Beauty Professionals**",
   "main": "next.config.js",
   "directories": {
     "lib": "lib"
   },
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -16,15 +21,23 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/bnckr/trimly-web/issues"
   },
   "homepage": "https://github.com/bnckr/trimly-web#readme",
   "dependencies": {
-    "@supabase/supabase-js": "^2.104.1"
+    "@fortawesome/fontawesome-svg-core": "^7.2.0",
+    "@fortawesome/free-solid-svg-icons": "^7.2.0",
+    "@fortawesome/react-fontawesome": "^3.3.1",
+    "@supabase/supabase-js": "^2.104.1",
+    "next": "^16.2.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0"
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "6.0.3"
   }
 }

@@ -1,0 +1,314 @@
+@import url('https://fonts.googleapis.com/css2?family=Afacad+Flux:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
+
+.login-page {
+  width: 100%;
+  min-height: 100vh;
+  background: #c7dae6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  font-family: 'Inter', sans-serif;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 1280px;
+  height: 760px;
+  background: #ffffff;
+  border-radius: 28px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1.08fr 0.92fr;
+  box-shadow: 10px 12px 18px rgba(0, 0, 0, 0.22);
+}
+
+.login-left {
+  position: relative;
+  background-image: url('/images/fundo_card.jpg');
+  background-size: cover;
+  background-position: center;
+  padding: 44px 56px;
+  display: flex;
+  flex-direction: column;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #000000;
+  font-family: 'Inter', sans-serif;
+  font-size: 34px;
+  font-weight: 500;
+}
+
+.brand-icon {
+  font-size: 42px;
+  line-height: 1;
+}
+
+.brand-name {
+  transform: translateY(-1px);
+}
+
+.hero-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(32px);
+  text-align: center;
+  color: #000000;
+}
+
+.welcome {
+  margin: 0 0 18px;
+  font-family: 'Afacad Flux', sans-serif;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.hero-text h1 {
+  margin: 0;
+  font-family: 'Afacad Flux', sans-serif;
+  font-size: 46px;
+  line-height: 1.22;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.hero-line {
+  width: 160px;
+  height: 9px;
+  border-radius: 999px;
+  background: #000000;
+  margin: 34px 0 26px;
+}
+
+.subtitle {
+  margin: 0;
+  color: #000000;
+  opacity: 0.72;
+  font-family: 'Afacad Flux', sans-serif;
+  font-size: 18px;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.login-right {
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px;
+}
+
+.login-form {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.login-form h2 {
+  margin: 0 0 54px;
+  color: #000000;
+  font-family: 'Afacad Flux', sans-serif;
+  font-size: 54px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.input-group {
+  width: 100%;
+  height: 66px;
+  position: relative;
+  margin-bottom: 30px;
+}
+
+.input-group input {
+  width: 100%;
+  height: 100%;
+  border: 1.5px solid #aeaeae;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #000000;
+  padding: 0 58px 0 22px;
+  font-family: 'Inter', sans-serif;
+  font-size: 22px;
+  outline: none;
+}
+
+.input-group input::placeholder {
+  color: #878484;
+}
+
+.input-group input:focus {
+  border-color: #2797e5;
+}
+
+.input-icon {
+  position: absolute;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #878484;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.forgot-password {
+  align-self: flex-end;
+  margin-top: -12px;
+  margin-bottom: 48px;
+  border: none;
+  background: transparent;
+  color: #2797e5;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.login-error {
+  width: 100%;
+  margin: -24px 0 24px;
+  color: #d93025;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  text-align: center;
+}
+
+.login-button {
+  width: 100%;
+  height: 78px;
+  border: none;
+  border-radius: 999px;
+  background: #71bbef;
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.login-button:hover {
+  background: #2797e5;
+}
+
+.login-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.brand-logo {
+  width: 150px;
+  height: auto;
+  display: block;
+}
+
+.auth-switch {
+  margin-top: 22px;
+  color: #878484;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+}
+
+.auth-switch a {
+  color: #2797e5;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.login-success {
+  width: 100%;
+  margin: -18px 0 20px;
+  color: #2797e5;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  text-align: center;
+}
+
+@media (max-width: 980px) {
+  .login-card {
+    height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .login-left {
+    min-height: 420px;
+  }
+
+  .login-right {
+    padding: 48px 28px;
+  }
+
+  .hero-text h1 {
+    font-size: 36px;
+  }
+
+  .login-form h2 {
+    font-size: 42px;
+    margin-bottom: 36px;
+  }
+}
+
+@media (max-width: 520px) {
+  .login-page {
+    padding: 18px;
+  }
+
+  .login-card {
+    border-radius: 22px;
+  }
+
+  .login-left {
+    padding: 28px 24px;
+    min-height: 380px;
+  }
+
+  .brand {
+    font-size: 26px;
+  }
+
+  .brand-icon {
+    font-size: 32px;
+  }
+
+  .welcome {
+    font-size: 18px;
+  }
+
+  .hero-text h1 {
+    font-size: 28px;
+  }
+
+  .subtitle {
+    font-size: 15px;
+  }
+
+  .input-group {
+    height: 56px;
+  }
+
+  .input-group input {
+    font-size: 18px;
+  }
+
+  .login-button {
+    height: 62px;
+    font-size: 22px;
+  }
+}
