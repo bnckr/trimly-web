@@ -14,6 +14,11 @@ type Profile = {
   avatar_url: string | null;
 };
 
+type Professional = {
+  id: string;
+  nome: string;
+};
+
 type AgendaEvent = {
   id: string;
   tipo_evento: "agendamento" | "bloqueio";
@@ -41,6 +46,11 @@ function getToday() {
 export default function AgendaPage() {
   const router = useRouter();
 
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState("");
+  const [filterType, setFilterType] = useState<
+    "dia" | "semana" | "mes" | "ano"
+  >("dia");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [selectedDate, setSelectedDate] = useState(getToday());
   const [events, setEvents] = useState<AgendaEvent[]>([]);
@@ -71,11 +81,28 @@ export default function AgendaPage() {
         avatar_url: profileData?.avatar_url ?? null,
       });
 
+      const { data: professionalsData } = await supabase
+        .from("profiles")
+        .select("id, nome")
+        .eq("ativo", true)
+        .order("nome", { ascending: true });
+
+      setProfessionals((professionalsData ?? []) as Professional[]);
+
+      if (!selectedProfessionalId) {
+        setSelectedProfessionalId(session.user.id);
+      }
+
+      const professionalId = selectedProfessionalId || session.user.id;
+      const range = getDateRange(selectedDate, filterType);
+
       const { data: agendaData, error } = await supabase
         .from("v_agenda_unificada")
         .select("*")
-        .eq("profissional_id", session.user.id)
-        .eq("data_referencia", selectedDate)
+        .eq("profissional_id", professionalId)
+        .gte("data_referencia", range.start)
+        .lte("data_referencia", range.end)
+        .order("data_referencia", { ascending: true })
         .order("hora_inicio", { ascending: true });
 
       if (error) {
@@ -92,7 +119,84 @@ export default function AgendaPage() {
     }
 
     loadPage();
-  }, [router, selectedDate]);
+  }, [router, selectedDate, selectedProfessionalId, filterType]);
+
+  function generateTimeSlots(start = 8, end = 20) {
+    const slots = [];
+
+    for (let hour = start; hour <= end; hour++) {
+      slots.push(`${String(hour).padStart(2, "0")}:00`);
+      slots.push(`${String(hour).padStart(2, "0")}:30`);
+    }
+
+    return slots;
+  }
+
+  function timeToMinutes(time: string) {
+    const [hours, minutes] = time.slice(0, 5).split(":").map(Number);
+    return hours * 60 + minutes;
+  }
+
+  function getEventPosition(start: string, end: string) {
+    const dayStart = 8 * 60;
+    const slotHeight = 48;
+
+    const startMinutes = timeToMinutes(start);
+    const endMinutes = timeToMinutes(end);
+
+    const top = ((startMinutes - dayStart) / 30) * slotHeight;
+    const height = Math.max(
+      ((endMinutes - startMinutes) / 30) * slotHeight,
+      48,
+    );
+
+    return { top, height };
+  }
+
+  function getDateRange(
+    dateString: string,
+    type: "dia" | "semana" | "mes" | "ano",
+  ) {
+    const [year, month, day] = dateString.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+
+    if (type === "dia") {
+      return { start: dateString, end: dateString };
+    }
+
+    if (type === "semana") {
+      const start = new Date(date);
+      const dayOfWeek = start.getDay();
+      const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      start.setDate(start.getDate() + diff);
+
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+
+      return {
+        start: start.toLocaleDateString("en-CA"),
+        end: end.toLocaleDateString("en-CA"),
+      };
+    }
+
+    if (type === "mes") {
+      const start = new Date(year, month - 1, 1);
+      const end = new Date(year, month, 0);
+
+      return {
+        start: start.toLocaleDateString("en-CA"),
+        end: end.toLocaleDateString("en-CA"),
+      };
+    }
+
+    const start = new Date(year, 0, 1);
+    const end = new Date(year, 11, 31);
+
+    return {
+      start: start.toLocaleDateString("en-CA"),
+      end: end.toLocaleDateString("en-CA"),
+    };
+  }
 
   function formatDateBR(dateString: string) {
     const [year, month, day] = dateString.split("-").map(Number);
@@ -106,12 +210,20 @@ export default function AgendaPage() {
     });
   }
 
-  async function loadAgenda(userId: string, date: string) {
+  async function loadAgenda(
+    professionalId: string,
+    date: string,
+    type = filterType,
+  ) {
+    const range = getDateRange(date, type);
+
     const { data, error } = await supabase
       .from("v_agenda_unificada")
       .select("*")
-      .eq("profissional_id", userId)
-      .eq("data_referencia", date)
+      .eq("profissional_id", professionalId)
+      .gte("data_referencia", range.start)
+      .lte("data_referencia", range.end)
+      .order("data_referencia", { ascending: true })
       .order("hora_inicio", { ascending: true });
 
     if (error) {
@@ -146,6 +258,31 @@ export default function AgendaPage() {
               onChange={(e) => setSelectedDate(e.target.value)}
             />
 
+            <select
+              value={selectedProfessionalId}
+              onChange={(e) => setSelectedProfessionalId(e.target.value)}
+            >
+              {professionals.map((professional) => (
+                <option key={professional.id} value={professional.id}>
+                  {professional.nome}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={filterType}
+              onChange={(e) =>
+                setFilterType(
+                  e.target.value as "dia" | "semana" | "mes" | "ano",
+                )
+              }
+            >
+              <option value="dia">Dia</option>
+              <option value="semana">Semana</option>
+              <option value="mes">Mês</option>
+              <option value="ano">Ano</option>
+            </select>
+
             <button
               className="secondary-button"
               type="button"
@@ -167,7 +304,12 @@ export default function AgendaPage() {
         <section className="agenda-panel">
           <div className="agenda-panel-header">
             <div>
-              <h3>Horários do dia</h3>
+              <h3>
+                {filterType === "dia" && "Horários do dia"}
+                {filterType === "semana" && "Horários da semana"}
+                {filterType === "mes" && "Horários do mês"}
+                {filterType === "ano" && "Horários do ano"}
+              </h3>
               <p>{formatDateBR(selectedDate)}</p>
             </div>
 
@@ -186,47 +328,101 @@ export default function AgendaPage() {
             </div>
           ) : (
             <div className="agenda-list">
-              {events.map((event) => (
-                <article
-                  key={event.id}
-                  className={`agenda-event ${
-                    event.tipo_evento === "bloqueio"
-                      ? "event-blocked"
-                      : "event-appointment"
-                  }`}
-                >
-                  <div className="event-time">
-                    <strong>{event.hora_inicio.slice(0, 5)}</strong>
-                    <span>{event.hora_fim.slice(0, 5)}</span>
+              {filterType === "dia" ? (
+                <div className="calendar-day-view">
+                  <div className="calendar-time-column">
+                    {generateTimeSlots().map((slot) => (
+                      <div className="calendar-time-slot" key={slot}>
+                        {slot.endsWith(":00") ? slot : ""}
+                      </div>
+                    ))}
                   </div>
 
-                  <div className="event-content">
-                    <div className="event-title-row">
-                      <h4>
-                        {event.tipo_evento === "bloqueio"
-                          ? (event.motivo_bloqueio ?? "Horário bloqueado")
-                          : event.cliente_nome}
-                      </h4>
+                  <div className="calendar-grid">
+                    {generateTimeSlots().map((slot) => (
+                      <div
+                        key={slot}
+                        className={`calendar-grid-line ${
+                          slot.endsWith(":00") ? "full-hour" : "half-hour"
+                        }`}
+                      />
+                    ))}
 
-                      <span className="event-status">{event.status}</span>
-                    </div>
+                    {events.map((event) => {
+                      const position = getEventPosition(
+                        event.hora_inicio,
+                        event.hora_fim,
+                      );
 
-                    {event.tipo_evento === "agendamento" ? (
-                      <p>
-                        {event.servico_nome} · {event.cliente_telefone}
-                      </p>
-                    ) : (
-                      <p>Indisponível para novos agendamentos.</p>
-                    )}
+                      return (
+                        <article
+                          key={event.id}
+                          className={`calendar-event ${
+                            event.tipo_evento === "bloqueio"
+                              ? "calendar-event-blocked"
+                              : "calendar-event-appointment"
+                          }`}
+                          style={{
+                            top: `${position.top}px`,
+                            height: `${position.height}px`,
+                          }}
+                        >
+                          <strong>
+                            {event.hora_inicio.slice(0, 5)} -{" "}
+                            {event.hora_fim.slice(0, 5)}
+                          </strong>
 
-                    {event.valor_final !== null ? (
-                      <span className="event-price">
-                        R$ {Number(event.valor_final).toFixed(2)}
-                      </span>
-                    ) : null}
+                          <span>
+                            {event.tipo_evento === "bloqueio"
+                              ? (event.motivo_bloqueio ?? "Horário bloqueado")
+                              : event.cliente_nome}
+                          </span>
+
+                          {event.tipo_evento === "agendamento" ? (
+                            <small>{event.servico_nome}</small>
+                          ) : null}
+                        </article>
+                      );
+                    })}
                   </div>
-                </article>
-              ))}
+                </div>
+              ) : (
+                <div className="agenda-list">
+                  {events.map((event) => (
+                    <article
+                      key={event.id}
+                      className={`agenda-event ${
+                        event.tipo_evento === "bloqueio"
+                          ? "event-blocked"
+                          : "event-appointment"
+                      }`}
+                    >
+                      <div className="event-time">
+                        <strong>{event.hora_inicio.slice(0, 5)}</strong>
+                        <span>{event.hora_fim.slice(0, 5)}</span>
+                      </div>
+
+                      <div className="event-content">
+                        <div className="event-title-row">
+                          <h4>
+                            {event.tipo_evento === "bloqueio"
+                              ? (event.motivo_bloqueio ?? "Horário bloqueado")
+                              : event.cliente_nome}
+                          </h4>
+
+                          <span className="event-status">{event.status}</span>
+                        </div>
+
+                        <p>
+                          {event.tipo_evento === "agendamento"
+                            ? `${event.servico_nome} · ${event.cliente_telefone}`
+                            : "Indisponível para novos agendamentos."}
+                        </p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </section>

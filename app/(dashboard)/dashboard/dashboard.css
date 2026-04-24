@@ -303,6 +303,166 @@
   font-size: 12px;
 }
 
+.dashboard-agenda-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.dashboard-agenda-item {
+  background: #f9fcff;
+  border: 1px solid #e5edf3;
+  border-left: 8px solid #71bbef;
+  border-radius: 20px;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.dashboard-agenda-item strong {
+  color: #000000;
+  font-family: 'Afacad Flux', sans-serif;
+  font-size: 24px;
+}
+
+.dashboard-agenda-item p {
+  margin: 6px 0 0;
+  color: #878484;
+  font-size: 14px;
+}
+
+.dashboard-agenda-item span {
+  background: #c7dae6;
+  color: #000000;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mini-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.mini-item {
+  background: #f4f8fb;
+  border-radius: 18px;
+  padding: 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.mini-item strong {
+  color: #000000;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.mini-item span {
+  color: #878484;
+  font-size: 13px;
+}
+
+.dashboard-filter-card {
+  background: #ffffff;
+  border-radius: 26px;
+  padding: 22px 24px;
+  box-shadow: 8px 10px 18px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 26px;
+}
+
+.dashboard-filter-label {
+  margin: 0 0 4px;
+  color: #878484;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.dashboard-filter-card h2 {
+  margin: 0;
+  font-family: 'Afacad Flux', sans-serif;
+  font-size: 34px;
+  color: #000000;
+}
+
+.dashboard-filter-context {
+  display: block;
+  margin-top: 6px;
+  color: #878484;
+  font-size: 14px;
+}
+
+.dashboard-filter-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.dashboard-filter-actions select,
+.dashboard-filter-actions input {
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid #c7dae6;
+  padding: 0 16px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  background: #ffffff;
+  color: #000000;
+}
+
+.dashboard-filter-actions button {
+  height: 44px;
+  border: none;
+  border-radius: 999px;
+  padding: 0 20px;
+  background: #000000;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.dashboard-filter-actions select:focus,
+.dashboard-filter-actions input:focus {
+  border-color: #2797e5;
+}
+
+.dashboard-agenda-day-group {
+  display: grid;
+  gap: 10px;
+}
+
+.dashboard-agenda-day-group h3 {
+  margin: 12px 0 2px;
+  font-family: 'Afacad Flux', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: #000000;
+}
+
+.dashboard-agenda-day-list {
+  display: grid;
+  gap: 10px;
+}
+
+.dashboard-agenda-item.compact {
+  padding: 14px 16px;
+}
+
+.dashboard-agenda-item.compact strong {
+  font-size: 20px;
+}
+
+
 @media (max-width: 1180px) {
   .dashboard-grid {
     grid-template-columns: repeat(2, 1fr);

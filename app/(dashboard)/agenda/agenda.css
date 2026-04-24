@@ -63,6 +63,22 @@
   outline: none;
 }
 
+.agenda-actions select {
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid #c7dae6;
+  padding: 0 16px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  background: #ffffff;
+  color: #000000;
+}
+
+.agenda-actions select:focus,
+.agenda-actions input:focus {
+  border-color: #2797e5;
+}
+
 .primary-button,
 .secondary-button {
   height: 44px;
@@ -443,6 +459,106 @@
 .time-conflict p {
   margin: 4px 0 0;
   font-size: 13px;
+}
+
+.calendar-day-view {
+  display: grid;
+  grid-template-columns: 82px 1fr;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.calendar-time-column {
+  display: grid;
+}
+
+.calendar-time-slot {
+  height: 48px;
+  color: #878484;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+  padding-right: 10px;
+  transform: translateY(-7px);
+}
+
+.calendar-grid {
+  position: relative;
+  min-height: 1248px;
+  border-left: 1px solid #c7dae6;
+  background: #ffffff;
+}
+
+.calendar-grid-line {
+  height: 48px;
+}
+
+.calendar-grid-line.full-hour {
+  border-top: 2px solid #c7dae6;
+}
+
+.calendar-grid-line.half-hour {
+  border-top: 1px dashed #e5edf3;
+}
+
+.calendar-grid-line.full-hour:nth-child(4n) {
+  background: rgba(113, 187, 239, 0.04);
+}
+
+.calendar-event {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  border-radius: 16px;
+  padding: 12px 14px;
+  overflow: hidden;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calendar-event strong {
+  color: #000000;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.calendar-event span {
+  color: #000000;
+  font-family: 'Afacad Flux', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.calendar-event small {
+  color: #878484;
+  font-size: 13px;
+}
+
+.calendar-event-appointment {
+  background: #e8f5ff;
+  border-left: 6px solid #2797e5;
+}
+
+.calendar-event-blocked {
+  background: #eeeeee;
+  border-left: 6px solid #000000;
+}
+
+@media (max-width: 720px) {
+  .calendar-day-view {
+    grid-template-columns: 58px 1fr;
+  }
+
+  .calendar-event {
+    left: 8px;
+    right: 8px;
+  }
+
+  .calendar-event span {
+    font-size: 16px;
+  }
 }
 
 @media (max-width: 980px) {
