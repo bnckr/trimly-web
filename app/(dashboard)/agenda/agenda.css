@@ -782,6 +782,48 @@
   border-left: 6px solid #000000;
 }
 
+.coupon-appointment-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.coupon-appointment-row button {
+  height: 46px;
+  padding: 0 18px;
+  white-space: nowrap;
+}
+
+.coupon-appointment-preview {
+  display: grid;
+  gap: 6px;
+  background: #f4f8fb;
+  border: 1.5px solid #c7dae6;
+  border-radius: 18px;
+  padding: 14px 16px;
+  color: #000000;
+  font-size: 14px;
+}
+
+.coupon-appointment-preview span {
+  color: #878484;
+}
+
+.coupon-appointment-preview strong {
+  color: #000000;
+}
+
+@media (max-width: 720px) {
+  .coupon-appointment-row {
+    grid-template-columns: 1fr;
+  }
+
+  .coupon-appointment-row button {
+    width: 100%;
+  }
+}
+
 @media (max-width: 720px) {
   .calendar-day-view {
     grid-template-columns: 58px 1fr;

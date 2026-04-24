@@ -2,6 +2,11 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  registerCouponUsage,
+  removeCouponUsageByAppointment,
+  validateCouponForAppointment,
+} from "@/actions/coupons";
 
 type Client = {
   id: string;
@@ -14,6 +19,18 @@ type Service = {
   nome: string;
   valor: number;
   duracao_minutos: number;
+};
+
+type CouponPreview = {
+  coupon: {
+    id: string;
+    nome_cupom: string;
+    percentual_desconto: number;
+  };
+  valorOriginal: number;
+  descontoPercentual: number;
+  valorDesconto: number;
+  valorFinal: number;
 };
 
 type ConflictEvent = {
@@ -55,6 +72,7 @@ function addMinutesToTime(time: string, minutes: number) {
 
   const [hours, mins] = time.split(":").map(Number);
   const date = new Date();
+
   date.setHours(hours, mins, 0, 0);
   date.setMinutes(date.getMinutes() + minutes);
 
@@ -74,6 +92,13 @@ function hasTimeConflict(
   );
 }
 
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
+
 export function AppointmentModal({
   open,
   selectedDate,
@@ -91,6 +116,11 @@ export function AppointmentModal({
   const [cupom, setCupom] = useState("");
   const [observacoes, setObservacoes] = useState("");
 
+  const [couponPreview, setCouponPreview] = useState<CouponPreview | null>(
+    null,
+  );
+  const [couponLoading, setCouponLoading] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -104,10 +134,12 @@ export function AppointmentModal({
   const conflicts = useMemo(() => {
     if (!horaInicio || !horaFim) return [];
 
-    return dayEvents.filter((event) =>
-      hasTimeConflict(horaInicio, horaFim, event.hora_inicio, event.hora_fim),
-    );
-  }, [dayEvents, horaInicio, horaFim]);
+    return dayEvents
+      .filter((event) => event.id !== editingEvent?.id)
+      .filter((event) =>
+        hasTimeConflict(horaInicio, horaFim, event.hora_inicio, event.hora_fim),
+      );
+  }, [dayEvents, horaInicio, horaFim, editingEvent?.id]);
 
   const hasConflict = conflicts.length > 0;
 
@@ -116,6 +148,7 @@ export function AppointmentModal({
 
     async function loadData() {
       setErro("");
+      setCouponPreview(null);
 
       const {
         data: { session },
@@ -167,7 +200,50 @@ export function AppointmentModal({
     }
 
     loadData();
-  }, [open, selectedDate]);
+  }, [open, selectedDate, editingEvent]);
+
+  useEffect(() => {
+    setCouponPreview(null);
+  }, [clienteId, servicoId, selectedDate, cupom]);
+
+  async function handleApplyCoupon() {
+    setErro("");
+
+    if (!cupom.trim()) {
+      setErro("Informe um cupom.");
+      return;
+    }
+
+    if (!clienteId) {
+      setErro("Selecione um cliente antes de aplicar o cupom.");
+      return;
+    }
+
+    if (!servicoId) {
+      setErro("Selecione um serviço antes de aplicar o cupom.");
+      return;
+    }
+
+    try {
+      setCouponLoading(true);
+
+      const result = await validateCouponForAppointment({
+        nome_cupom: cupom,
+        cliente_id: clienteId,
+        servico_id: servicoId,
+        data_agendamento: selectedDate,
+      });
+
+      setCouponPreview(result as CouponPreview);
+    } catch (error) {
+      setCouponPreview(null);
+      setErro(
+        error instanceof Error ? error.message : "Erro ao validar cupom.",
+      );
+    } finally {
+      setCouponLoading(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -205,42 +281,94 @@ export function AppointmentModal({
       return;
     }
 
-    const payload = {
-      profissional_id: session.user.id,
-      cliente_id: clienteId,
-      servico_id: servicoId,
-      cupom_codigo_informado: cupom || null,
-      data_agendamento: selectedDate,
-      hora_inicio: horaInicio,
-      observacoes: observacoes || null,
-      status: editingEvent?.status ?? "agendado",
-      encaixe: false,
-      cliente_atrasado: false,
-    };
+    let finalCouponPreview = couponPreview;
 
-    const { error } = editingEvent
-      ? await supabase
-          .from("appointments")
-          .update(payload)
-          .eq("id", editingEvent.id)
-      : await supabase.from("appointments").insert(payload);
+    try {
+      if (cupom.trim() && !finalCouponPreview) {
+        finalCouponPreview = (await validateCouponForAppointment({
+          nome_cupom: cupom,
+          cliente_id: clienteId,
+          servico_id: servicoId,
+          data_agendamento: selectedDate,
+        })) as CouponPreview;
+      }
 
-    setLoading(false);
+      const valorOriginal = finalCouponPreview
+        ? finalCouponPreview.valorOriginal
+        : Number(selectedService.valor);
 
-    if (error) {
-      setErro(error.message);
-      return;
+      const descontoPercentual = finalCouponPreview
+        ? finalCouponPreview.descontoPercentual
+        : 0;
+
+      const valorFinal = finalCouponPreview
+        ? finalCouponPreview.valorFinal
+        : Number(selectedService.valor);
+
+      const payload = {
+        profissional_id: session.user.id,
+        cliente_id: clienteId,
+        servico_id: servicoId,
+        cupom_id: finalCouponPreview?.coupon.id ?? null,
+        cupom_codigo_informado: cupom.trim() || null,
+        desconto_percentual: descontoPercentual,
+        valor_original: valorOriginal,
+        valor_final: valorFinal,
+        data_agendamento: selectedDate,
+        hora_inicio: horaInicio,
+        observacoes: observacoes || null,
+        status: editingEvent?.status ?? "agendado",
+        encaixe: false,
+        cliente_atrasado: false,
+      };
+
+      const { data, error } = editingEvent
+        ? await supabase
+            .from("appointments")
+            .update(payload)
+            .eq("id", editingEvent.id)
+            .select("id")
+            .single()
+        : await supabase
+            .from("appointments")
+            .insert(payload)
+            .select("id")
+            .single();
+
+      if (error) {
+        setErro(error.message);
+        setLoading(false);
+        return;
+      }
+
+      if (finalCouponPreview?.coupon.id) {
+        await registerCouponUsage({
+          coupon_id: finalCouponPreview.coupon.id,
+          appointment_id: data.id,
+          cliente_id: clienteId,
+          profissional_id: session.user.id,
+        });
+      } else {
+        await removeCouponUsageByAppointment(data.id);
+      }
+
+      setClienteId("");
+      setServicoId("");
+      setHoraInicio("");
+      setCupom("");
+      setObservacoes("");
+      setCouponPreview(null);
+      setDayEvents([]);
+
+      onSaved();
+      onClose();
+    } catch (error) {
+      setErro(
+        error instanceof Error ? error.message : "Erro ao salvar agendamento.",
+      );
+    } finally {
+      setLoading(false);
     }
-
-    setClienteId("");
-    setServicoId("");
-    setHoraInicio("");
-    setCupom("");
-    setObservacoes("");
-    setDayEvents([]);
-
-    onSaved();
-    onClose();
   }
 
   if (!open) return null;
@@ -294,7 +422,9 @@ export function AppointmentModal({
 
           {selectedService ? (
             <div className="service-preview">
-              <span>Valor: R$ {Number(selectedService.valor).toFixed(2)}</span>
+              <span>
+                Valor: {formatCurrency(Number(selectedService.valor))}
+              </span>
               <span>Duração: {selectedService.duracao_minutos} min</span>
             </div>
           ) : null}
@@ -339,13 +469,43 @@ export function AppointmentModal({
 
           <label>
             Cupom
-            <input
-              type="text"
-              placeholder="Ex: ANIVERSARIANTE10"
-              value={cupom}
-              onChange={(e) => setCupom(e.target.value.toUpperCase())}
-            />
+            <div className="coupon-appointment-row">
+              <input
+                type="text"
+                placeholder="Ex: ANIVERSARIANTE10"
+                value={cupom}
+                onChange={(e) => setCupom(e.target.value.toUpperCase())}
+              />
+
+              <button
+                type="button"
+                className="appointment-save-button"
+                onClick={handleApplyCoupon}
+                disabled={couponLoading || !cupom.trim()}
+              >
+                {couponLoading ? "Validando..." : "Aplicar"}
+              </button>
+            </div>
           </label>
+
+          {couponPreview ? (
+            <div className="coupon-appointment-preview">
+              <span>
+                Cupom aplicado:{" "}
+                <strong>{couponPreview.coupon.nome_cupom}</strong>
+              </span>
+              <span>
+                Valor original: {formatCurrency(couponPreview.valorOriginal)}
+              </span>
+              <span>
+                Desconto: {couponPreview.descontoPercentual}% (
+                {formatCurrency(couponPreview.valorDesconto)})
+              </span>
+              <strong>
+                Valor final: {formatCurrency(couponPreview.valorFinal)}
+              </strong>
+            </div>
+          ) : null}
 
           <label>
             Observações
