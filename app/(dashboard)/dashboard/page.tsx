@@ -16,6 +16,7 @@ type Profile = {
 type DashboardStats = {
   atendimentosHoje: number;
   faturamentoPrevisto: number;
+  faturamentoDia: number;
   clientesMes: number;
   horariosBloqueados: number;
 };
@@ -39,6 +40,8 @@ type BirthdayClient = {
   nome: string;
   telefone: string;
   data_nascimento: string;
+  aniversario_dia: number;
+  cupom_usado: boolean;
 };
 
 type Professional = {
@@ -105,6 +108,36 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+function formatDateShortBR(dateString: string) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  return date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
+function formatDateFullBR(dateString: string) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  return date.toLocaleDateString("pt-BR");
+}
+
+function groupAgendaByDate(items: AgendaItem[]) {
+  return items.reduce<Record<string, AgendaItem[]>>((acc, item) => {
+    const date = item.data_referencia;
+
+    if (!acc[date]) {
+      acc[date] = [];
+    }
+
+    acc[date].push(item);
+    return acc;
+  }, {});
+}
+
 export default function DashboardPage() {
   const router = useRouter();
 
@@ -112,6 +145,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     atendimentosHoje: 0,
     faturamentoPrevisto: 0,
+    faturamentoDia: 0,
     clientesMes: 0,
     horariosBloqueados: 0,
   });
@@ -127,6 +161,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadDashboard() {
+      setLoading(true);
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -138,6 +174,7 @@ export default function DashboardPage() {
 
       const professionalId = selectedProfessionalId || session.user.id;
       const range = getDateRange(selectedDate, filterType);
+      const today = getToday();
 
       const { data: profileData } = await supabase
         .from("profiles")
@@ -163,12 +200,19 @@ export default function DashboardPage() {
         setSelectedProfessionalId(session.user.id);
       }
 
-      const { data: appointmentsToday } = await supabase
+      const { data: appointmentsPeriod } = await supabase
         .from("appointments")
         .select("id, status, valor_final")
         .eq("profissional_id", professionalId)
         .gte("data_agendamento", range.start)
         .lte("data_agendamento", range.end);
+
+      const { data: todayPayments } = await supabase
+        .from("appointment_payments")
+        .select("valor_liquido_colaborador, pago_em")
+        .eq("profissional_id", professionalId)
+        .gte("pago_em", `${today}T00:00:00`)
+        .lte("pago_em", `${today}T23:59:59`);
 
       const { data: agendaData } = await supabase
         .from("v_agenda_unificada")
@@ -205,7 +249,32 @@ export default function DashboardPage() {
         return month === currentMonth;
       });
 
-      const validAppointments = (appointmentsToday ?? []).filter((item) =>
+      const birthdayClientIds = birthdayClients.map((client) => client.id);
+
+      const { data: usedBirthdayCoupons } =
+        birthdayClientIds.length > 0
+          ? await supabase
+              .from("coupon_usages")
+              .select("cliente_id")
+              .in("cliente_id", birthdayClientIds)
+          : { data: [] };
+
+      const usedBirthdayCouponClientIds = new Set(
+        (usedBirthdayCoupons ?? []).map((item) => item.cliente_id),
+      );
+
+      const birthdaysWithCoupon = birthdayClients
+        .map((client) => ({
+          id: client.id,
+          nome: client.nome,
+          telefone: client.telefone,
+          data_nascimento: client.data_nascimento,
+          aniversario_dia: Number(client.data_nascimento.split("-")[2]),
+          cupom_usado: usedBirthdayCouponClientIds.has(client.id),
+        }))
+        .sort((a, b) => a.aniversario_dia - b.aniversario_dia);
+
+      const validAppointments = (appointmentsPeriod ?? []).filter((item) =>
         ["agendado", "confirmado", "em_atendimento", "finalizado"].includes(
           item.status,
         ),
@@ -216,15 +285,21 @@ export default function DashboardPage() {
         0,
       );
 
+      const faturamentoDia = (todayPayments ?? []).reduce(
+        (total, item) => total + Number(item.valor_liquido_colaborador ?? 0),
+        0,
+      );
+
       setStats({
         atendimentosHoje: validAppointments.length,
         faturamentoPrevisto,
+        faturamentoDia,
         clientesMes: clientsMonth?.length ?? 0,
         horariosBloqueados: blockedToday?.length ?? 0,
       });
 
       setAgendaHoje((agendaData ?? []) as AgendaItem[]);
-      setAniversariantes((birthdayClients ?? []) as BirthdayClient[]);
+      setAniversariantes(birthdaysWithCoupon);
       setLoading(false);
     }
 
@@ -246,38 +321,14 @@ export default function DashboardPage() {
     );
   }
 
+  const upcomingAppointments = agendaHoje.filter(
+    (item) =>
+      item.tipo_evento === "agendamento" &&
+      !["finalizado", "cancelado", "faltou"].includes(item.status),
+  );
+
   if (loading) {
     return <main className="dashboard-loading">Carregando Trimly...</main>;
-  }
-
-  function formatDateShortBR(dateString: string) {
-    const [year, month, day] = dateString.split("-").map(Number);
-    const date = new Date(year, month - 1, day);
-
-    return date.toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-    });
-  }
-
-  function formatDateFullBR(dateString: string) {
-    const [year, month, day] = dateString.split("-").map(Number);
-    const date = new Date(year, month - 1, day);
-
-    return date.toLocaleDateString("pt-BR");
-  }
-
-  function groupAgendaByDate(items: AgendaItem[]) {
-    return items.reduce<Record<string, AgendaItem[]>>((acc, item) => {
-      const date = item.data_referencia;
-
-      if (!acc[date]) {
-        acc[date] = [];
-      }
-
-      acc[date].push(item);
-      return acc;
-    }, {});
   }
 
   return (
@@ -338,18 +389,27 @@ export default function DashboardPage() {
           <DashboardCard
             title={`Atendimentos ${getPeriodLabel()}`}
             value={String(stats.atendimentosHoje)}
-            description="Agendados, confirmados ou finalizados"
+            description="Agendados, confirmados, em atendimento ou finalizados"
           />
+
           <DashboardCard
             title="Faturamento previsto"
             value={formatCurrency(stats.faturamentoPrevisto)}
             description={`Baseado nos agendamentos ${getPeriodLabel()}`}
           />
+
+          <DashboardCard
+            title="Faturamento líquido do dia"
+            value={formatCurrency(stats.faturamentoDia)}
+            description="Valor recebido após descontos e taxas"
+          />
+
           <DashboardCard
             title={`Clientes ${getPeriodLabel()}`}
             value={String(stats.clientesMes)}
             description="Novos clientes cadastrados"
           />
+
           <DashboardCard
             title={`Horários bloqueados ${getPeriodLabel()}`}
             value={String(stats.horariosBloqueados)}
@@ -365,7 +425,17 @@ export default function DashboardPage() {
                 <p>
                   {filterType === "dia"
                     ? `Resumo do dia ${formatDateFullBR(selectedDate)}.`
-                    : `${filterType === "semana" ? "Semana" : filterType === "mes" ? "Período do mês" : "Período do ano"} de ${formatDateFullBR(getDateRange(selectedDate, filterType).start)} até ${formatDateFullBR(getDateRange(selectedDate, filterType).end)}.`}
+                    : `${
+                        filterType === "semana"
+                          ? "Semana"
+                          : filterType === "mes"
+                            ? "Período do mês"
+                            : "Período do ano"
+                      } de ${formatDateFullBR(
+                        getDateRange(selectedDate, filterType).start,
+                      )} até ${formatDateFullBR(
+                        getDateRange(selectedDate, filterType).end,
+                      )}.`}
                 </p>
               </div>
 
@@ -452,20 +522,16 @@ export default function DashboardPage() {
             <section className="panel">
               <h2>Próximos atendimentos</h2>
 
-              {agendaHoje.filter((item) => item.tipo_evento === "agendamento")
-                .length === 0 ? (
+              {upcomingAppointments.length === 0 ? (
                 <div className="mini-empty">Nenhum atendimento próximo.</div>
               ) : (
                 <div className="mini-list">
-                  {agendaHoje
-                    .filter((item) => item.tipo_evento === "agendamento")
-                    .slice(0, 4)
-                    .map((item) => (
-                      <div className="mini-item" key={item.id}>
-                        <strong>{item.hora_inicio.slice(0, 5)}</strong>
-                        <span>{item.cliente_nome}</span>
-                      </div>
-                    ))}
+                  {upcomingAppointments.slice(0, 4).map((item) => (
+                    <div className="mini-item" key={item.id}>
+                      <strong>{item.hora_inicio.slice(0, 5)}</strong>
+                      <span>{item.cliente_nome}</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </section>
@@ -482,7 +548,23 @@ export default function DashboardPage() {
                   {aniversariantes.map((client) => (
                     <div className="mini-item" key={client.id}>
                       <strong>{client.nome}</strong>
-                      <span>{client.telefone}</span>
+
+                      <span>
+                        Dia {String(client.aniversario_dia).padStart(2, "0")} ·{" "}
+                        {client.telefone}
+                      </span>
+
+                      <small
+                        className={
+                          client.cupom_usado
+                            ? "birthday-coupon-used"
+                            : "birthday-coupon-available"
+                        }
+                      >
+                        {client.cupom_usado
+                          ? "Cupom usado"
+                          : "Cupom disponível"}
+                      </small>
                     </div>
                   ))}
                 </div>

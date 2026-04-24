@@ -1,11 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Afacad+Flux:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Afacad+Flux:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap");
 
 .dashboard-loading {
   min-height: 100vh;
   display: grid;
   place-items: center;
   background: #c7dae6;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   color: #000000;
 }
 
@@ -14,7 +14,7 @@
   display: grid;
   grid-template-columns: 280px 1fr;
   background: #c7dae6;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 .sidebar {
@@ -109,7 +109,7 @@
 
 .dashboard-header h1 {
   margin: 0;
-  font-family: 'Afacad Flux', sans-serif;
+  font-family: "Afacad Flux", sans-serif;
   color: #000000;
   font-size: 38px;
   line-height: 1;
@@ -144,7 +144,7 @@
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(180px, 1fr));
   gap: 18px;
   margin-bottom: 26px;
 }
@@ -154,20 +154,28 @@
   border-radius: 24px;
   padding: 24px;
   box-shadow: 8px 10px 18px rgba(0, 0, 0, 0.1);
+  min-height: 132px;
+  padding: 22px 24px;
 }
 
 .dashboard-card p {
   margin: 0 0 12px;
   color: #878484;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.4;
   font-weight: 700;
+}
+
+.dashboard-card h3,
+.dashboard-card span {
+  font-size: 14px;
 }
 
 .dashboard-card strong {
   display: block;
   color: #000000;
-  font-family: 'Afacad Flux', sans-serif;
-  font-size: 42px;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 34px;
   line-height: 1;
   font-weight: 800;
   margin-bottom: 12px;
@@ -205,7 +213,7 @@
 
 .panel h2 {
   margin: 0;
-  font-family: 'Afacad Flux', sans-serif;
+  font-family: "Afacad Flux", sans-serif;
   font-size: 30px;
   font-weight: 800;
   color: #000000;
@@ -230,7 +238,7 @@
 
 .empty-state h3 {
   margin: 0 0 8px;
-  font-family: 'Afacad Flux', sans-serif;
+  font-family: "Afacad Flux", sans-serif;
   font-size: 28px;
   color: #000000;
 }
@@ -323,7 +331,7 @@
 
 .dashboard-agenda-item strong {
   color: #000000;
-  font-family: 'Afacad Flux', sans-serif;
+  font-family: "Afacad Flux", sans-serif;
   font-size: 24px;
 }
 
@@ -389,7 +397,7 @@
 
 .dashboard-filter-card h2 {
   margin: 0;
-  font-family: 'Afacad Flux', sans-serif;
+  font-family: "Afacad Flux", sans-serif;
   font-size: 34px;
   color: #000000;
 }
@@ -414,7 +422,7 @@
   border-radius: 999px;
   border: 1px solid #c7dae6;
   padding: 0 16px;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   outline: none;
   background: #ffffff;
   color: #000000;
@@ -443,7 +451,7 @@
 
 .dashboard-agenda-day-group h3 {
   margin: 12px 0 2px;
-  font-family: 'Afacad Flux', sans-serif;
+  font-family: "Afacad Flux", sans-serif;
   font-size: 24px;
   font-weight: 800;
   color: #000000;
@@ -461,7 +469,6 @@
 .dashboard-agenda-item.compact strong {
   font-size: 20px;
 }
-
 
 @media (max-width: 1180px) {
   .dashboard-grid {
@@ -499,6 +506,18 @@
 
   .dashboard-grid,
   .side-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1400px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
     grid-template-columns: 1fr;
   }
 }

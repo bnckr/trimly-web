@@ -23,6 +23,7 @@ type Professional = {
 type AgendaEvent = {
   id: string;
   tipo_evento: "agendamento" | "bloqueio";
+  profissional_id?: string | null;
   data_referencia: string;
   hora_inicio: string;
   hora_fim: string;
@@ -30,24 +31,166 @@ type AgendaEvent = {
   cliente_nome: string | null;
   cliente_telefone: string | null;
   servico_nome: string | null;
+  valor_original?: number | null;
+  desconto_percentual?: number | null;
   valor_final: number | null;
   motivo_bloqueio: string | null;
-
+  pagamento_registrado?: boolean;
+  auto_bloqueio?: boolean;
   cliente_id?: string | null;
   servico_id?: string | null;
+  cupom_id?: string | null;
   cupom_codigo_informado?: string | null;
   observacoes?: string | null;
 };
 
+type WorkingHour = {
+  id: string;
+  profissional_id: string;
+  dia_semana: number;
+  hora_inicio: string;
+  hora_fim: string;
+  ativo: boolean;
+};
+
+type BreakTime = {
+  id: string;
+  profissional_id: string;
+  dia_semana: number;
+  hora_inicio: string;
+  hora_fim: string;
+  motivo: string | null;
+  ativo: boolean;
+};
 
 function getToday() {
   const today = new Date();
-
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, "0");
   const day = String(today.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+function getDayOfWeek(dateString: string) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day).getDay();
+}
+
+function getDatesBetween(start: string, end: string) {
+  const dates: string[] = [];
+
+  const [startYear, startMonth, startDay] = start.split("-").map(Number);
+  const [endYear, endMonth, endDay] = end.split("-").map(Number);
+
+  const current = new Date(startYear, startMonth - 1, startDay);
+  const last = new Date(endYear, endMonth - 1, endDay);
+
+  while (current <= last) {
+    dates.push(current.toLocaleDateString("en-CA"));
+    current.setDate(current.getDate() + 1);
+  }
+
+  return dates;
+}
+
+function buildScheduleMirrorEvents({
+  rangeStart,
+  rangeEnd,
+  workingHours,
+  breakTimes,
+}: {
+  rangeStart: string;
+  rangeEnd: string;
+  workingHours: WorkingHour[];
+  breakTimes: BreakTime[];
+}) {
+  const dates = getDatesBetween(rangeStart, rangeEnd);
+  const mirrorEvents: AgendaEvent[] = [];
+
+  dates.forEach((date) => {
+    const dayOfWeek = getDayOfWeek(date);
+
+    const workingHour = workingHours.find(
+      (item) => item.dia_semana === dayOfWeek && item.ativo,
+    );
+
+    const dayBreaks = breakTimes.filter(
+      (item) => item.dia_semana === dayOfWeek && item.ativo,
+    );
+
+    if (!workingHour) {
+      mirrorEvents.push({
+        id: `auto-closed-${date}`,
+        tipo_evento: "bloqueio",
+        data_referencia: date,
+        hora_inicio: "08:00",
+        hora_fim: "20:00",
+        status: "",
+        cliente_nome: null,
+        cliente_telefone: null,
+        servico_nome: null,
+        valor_final: null,
+        motivo_bloqueio: "Fora do expediente",
+        auto_bloqueio: true,
+      });
+
+      return;
+    }
+
+    if (workingHour.hora_inicio.slice(0, 5) > "08:00") {
+      mirrorEvents.push({
+        id: `auto-before-${date}`,
+        tipo_evento: "bloqueio",
+        data_referencia: date,
+        hora_inicio: "08:00",
+        hora_fim: workingHour.hora_inicio.slice(0, 5),
+        status: "",
+        cliente_nome: null,
+        cliente_telefone: null,
+        servico_nome: null,
+        valor_final: null,
+        motivo_bloqueio: "Antes do expediente",
+        auto_bloqueio: true,
+      });
+    }
+
+    if (workingHour.hora_fim.slice(0, 5) < "20:00") {
+      mirrorEvents.push({
+        id: `auto-after-${date}`,
+        tipo_evento: "bloqueio",
+        data_referencia: date,
+        hora_inicio: workingHour.hora_fim.slice(0, 5),
+        hora_fim: "20:00",
+        status: "",
+        cliente_nome: null,
+        cliente_telefone: null,
+        servico_nome: null,
+        valor_final: null,
+        motivo_bloqueio: "Após o expediente",
+        auto_bloqueio: true,
+      });
+    }
+
+    dayBreaks.forEach((breakTime) => {
+      mirrorEvents.push({
+        id: `auto-break-${date}-${breakTime.id}`,
+        tipo_evento: "bloqueio",
+        data_referencia: date,
+        hora_inicio: breakTime.hora_inicio.slice(0, 5),
+        hora_fim: breakTime.hora_fim.slice(0, 5),
+        status: "",
+        cliente_nome: null,
+        cliente_telefone: null,
+        servico_nome: null,
+        valor_final: null,
+        motivo_bloqueio: breakTime.motivo ?? "Intervalo",
+        auto_bloqueio: true,
+      });
+    });
+  });
+
+  return mirrorEvents;
 }
 
 export default function AgendaPage() {
@@ -69,99 +212,37 @@ export default function AgendaPage() {
   const [editingAppointment, setEditingAppointment] =
     useState<AgendaEvent | null>(null);
 
-  useEffect(() => {
-    async function loadPage() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+  async function attachPaymentStatus(agendaData: AgendaEvent[]) {
+    const appointmentIds = agendaData
+      .filter((item) => item.tipo_evento === "agendamento")
+      .map((item) => item.id);
 
-      if (!session) {
-        router.replace("/login");
-        return;
-      }
-
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("nome, email, avatar_url")
-        .eq("id", session.user.id)
-        .single();
-
-      setProfile({
-        nome: profileData?.nome ?? session.user.email ?? "Profissional",
-        email: profileData?.email ?? session.user.email ?? null,
-        avatar_url: profileData?.avatar_url ?? null,
-      });
-
-      const { data: professionalsData } = await supabase
-        .from("profiles")
-        .select("id, nome")
-        .eq("ativo", true)
-        .order("nome", { ascending: true });
-
-      setProfessionals((professionalsData ?? []) as Professional[]);
-
-      if (!selectedProfessionalId) {
-        setSelectedProfessionalId(session.user.id);
-      }
-
-      const professionalId = selectedProfessionalId || session.user.id;
-      const range = getDateRange(selectedDate, filterType);
-
-      const { data: agendaData, error } = await supabase
-        .from("v_agenda_unificada")
-        .select("*")
-        .eq("profissional_id", professionalId)
-        .gte("data_referencia", range.start)
-        .lte("data_referencia", range.end)
-        .order("data_referencia", { ascending: true })
-        .order("hora_inicio", { ascending: true });
-
-      if (error) {
-        console.error("Erro ao carregar agenda:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-        });
-      }
-
-      setEvents((agendaData ?? []) as AgendaEvent[]);
-      setLoading(false);
+    if (appointmentIds.length === 0) {
+      return agendaData.map((item) => ({
+        ...item,
+        pagamento_registrado: false,
+      }));
     }
 
-    loadPage();
-  }, [router, selectedDate, selectedProfessionalId, filterType]);
+    const { data: paymentsData, error } = await supabase
+      .from("appointment_payments")
+      .select("appointment_id")
+      .in("appointment_id", appointmentIds);
 
-  function generateTimeSlots(start = 8, end = 20) {
-    const slots = [];
-
-    for (let hour = start; hour <= end; hour++) {
-      slots.push(`${String(hour).padStart(2, "0")}:00`);
-      slots.push(`${String(hour).padStart(2, "0")}:30`);
+    if (error) {
+      console.error("Erro ao carregar pagamentos:", error);
+      return agendaData;
     }
 
-    return slots;
-  }
-
-  function timeToMinutes(time: string) {
-    const [hours, minutes] = time.slice(0, 5).split(":").map(Number);
-    return hours * 60 + minutes;
-  }
-
-  function getEventPosition(start: string, end: string) {
-    const dayStart = 8 * 60;
-    const slotHeight = 48;
-
-    const startMinutes = timeToMinutes(start);
-    const endMinutes = timeToMinutes(end);
-
-    const top = ((startMinutes - dayStart) / 30) * slotHeight;
-    const height = Math.max(
-      ((endMinutes - startMinutes) / 30) * slotHeight,
-      56,
+    const paidAppointmentIds = new Set(
+      (paymentsData ?? []).map((payment) => payment.appointment_id),
     );
 
-    return { top, height };
+    return agendaData.map((item) => ({
+      ...item,
+      pagamento_registrado:
+        item.tipo_evento === "agendamento" && paidAppointmentIds.has(item.id),
+    }));
   }
 
   function getDateRange(
@@ -209,6 +290,136 @@ export default function AgendaPage() {
     };
   }
 
+  async function loadAgenda(professionalId: string, date: string, type = filterType) {
+    const range = getDateRange(date, type);
+
+    const { data: agendaData, error } = await supabase
+      .from("v_agenda_unificada")
+      .select("*")
+      .eq("profissional_id", professionalId)
+      .gte("data_referencia", range.start)
+      .lte("data_referencia", range.end)
+      .order("data_referencia", { ascending: true })
+      .order("hora_inicio", { ascending: true });
+
+    if (error) {
+      console.error("Erro ao carregar agenda:", error);
+      return;
+    }
+
+    const { data: workingHoursData } = await supabase
+      .from("working_hours")
+      .select("*")
+      .eq("profissional_id", professionalId);
+
+    const { data: breakTimesData } = await supabase
+      .from("break_times")
+      .select("*")
+      .eq("profissional_id", professionalId)
+      .eq("ativo", true);
+
+    const scheduleMirrorEvents = buildScheduleMirrorEvents({
+      rangeStart: range.start,
+      rangeEnd: range.end,
+      workingHours: (workingHoursData ?? []) as WorkingHour[],
+      breakTimes: (breakTimesData ?? []) as BreakTime[],
+    });
+
+    const agendaWithMirror = [
+      ...((agendaData ?? []) as AgendaEvent[]),
+      ...scheduleMirrorEvents,
+    ].sort((a, b) => {
+      if (a.data_referencia !== b.data_referencia) {
+        return a.data_referencia.localeCompare(b.data_referencia);
+      }
+
+      return a.hora_inicio.localeCompare(b.hora_inicio);
+    });
+
+    const agendaWithPayment = await attachPaymentStatus(agendaWithMirror);
+
+    setEvents(agendaWithPayment);
+  }
+
+  useEffect(() => {
+    async function loadPage() {
+      setLoading(true);
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.replace("/login");
+        return;
+      }
+
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("nome, email, avatar_url")
+        .eq("id", session.user.id)
+        .single();
+
+      setProfile({
+        nome: profileData?.nome ?? session.user.email ?? "Profissional",
+        email: profileData?.email ?? session.user.email ?? null,
+        avatar_url: profileData?.avatar_url ?? null,
+      });
+
+      const { data: professionalsData } = await supabase
+        .from("profiles")
+        .select("id, nome")
+        .eq("ativo", true)
+        .order("nome", { ascending: true });
+
+      setProfessionals((professionalsData ?? []) as Professional[]);
+
+      const professionalId = selectedProfessionalId || session.user.id;
+
+      if (!selectedProfessionalId) {
+        setSelectedProfessionalId(session.user.id);
+      }
+
+      await loadAgenda(professionalId, selectedDate, filterType);
+
+      setLoading(false);
+    }
+
+    loadPage();
+  }, [router, selectedDate, selectedProfessionalId, filterType]);
+
+  function generateTimeSlots(start = 8, end = 20) {
+    const slots = [];
+
+    for (let hour = start; hour <= end; hour++) {
+      slots.push(`${String(hour).padStart(2, "0")}:00`);
+      slots.push(`${String(hour).padStart(2, "0")}:30`);
+    }
+
+    return slots;
+  }
+
+  function timeToMinutes(time: string) {
+    const [hours, minutes] = time.slice(0, 5).split(":").map(Number);
+    return hours * 60 + minutes;
+  }
+
+  function getEventPosition(start: string, end: string) {
+    const dayStart = 8 * 60;
+    const slotHeight = 48;
+
+    const startMinutes = timeToMinutes(start);
+    const endMinutes = timeToMinutes(end);
+
+    const top = ((startMinutes - dayStart) / 30) * slotHeight;
+    const height = Math.max(
+      ((endMinutes - startMinutes) / 30) * slotHeight,
+      56,
+    );
+
+    return { top, height };
+  }
+
   function getWeekDays(dateString: string) {
     const [year, month, day] = dateString.split("-").map(Number);
     const date = new Date(year, month - 1, day);
@@ -249,7 +460,6 @@ export default function AgendaPage() {
 
   function formatDateBR(dateString: string) {
     const [year, month, day] = dateString.split("-").map(Number);
-
     const date = new Date(year, month - 1, day);
 
     return date.toLocaleDateString("pt-BR", {
@@ -259,40 +469,23 @@ export default function AgendaPage() {
     });
   }
 
-  async function loadAgenda(
-    professionalId: string,
-    date: string,
-    type = filterType,
-  ) {
-    const range = getDateRange(date, type);
-
-    const { data, error } = await supabase
-      .from("v_agenda_unificada")
-      .select("*")
-      .eq("profissional_id", professionalId)
-      .gte("data_referencia", range.start)
-      .lte("data_referencia", range.end)
-      .order("data_referencia", { ascending: true })
-      .order("hora_inicio", { ascending: true });
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setEvents((data ?? []) as AgendaEvent[]);
-  }
-
-  if (loading) {
-    return <main className="agenda-loading">Carregando agenda...</main>;
-  }
-
   function getStatusClass(status: string) {
     if (status === "finalizado") return "status-finalizado";
     if (status === "em_atendimento") return "status-atendimento";
     if (status === "cancelado" || status === "faltou") return "status-problema";
     if (status === "confirmado") return "status-confirmado";
     return "status-agendado";
+  }
+
+  function handleOpenEvent(event: AgendaEvent) {
+    if (event.auto_bloqueio) return;
+
+    setSelectedEvent(event);
+    setShowEventDetailsModal(true);
+  }
+
+  if (loading) {
+    return <main className="agenda-loading">Carregando agenda...</main>;
   }
 
   return (
@@ -347,11 +540,10 @@ export default function AgendaPage() {
             >
               Bloquear horário
             </button>
+
             <button
               className="primary-button"
-              onClick={() => {
-                setShowAppointmentModal(true);
-              }}
+              onClick={() => setShowAppointmentModal(true)}
             >
               Novo agendamento
             </button>
@@ -371,7 +563,14 @@ export default function AgendaPage() {
             </div>
 
             <span>
-              {events.length} {events.length === 1 ? "cliente" : "clientes"}
+              {
+                events.filter((event) => event.tipo_evento === "agendamento")
+                  .length
+              }{" "}
+              clientes
+              {" / "}
+              {events.filter((event) => event.tipo_evento === "bloqueio").length}{" "}
+              bloqueios
             </span>
           </div>
 
@@ -421,28 +620,34 @@ export default function AgendaPage() {
                       return (
                         <article
                           key={event.id}
-                          onClick={() => {
-                            setSelectedEvent(event);
-                            setShowEventDetailsModal(true);
-                          }}
+                          data-auto={event.auto_bloqueio ? "true" : "false"}
+                          onClick={() => handleOpenEvent(event)}
                           className={`calendar-event ${
                             event.tipo_evento === "bloqueio"
                               ? "calendar-event-blocked"
-                              : `calendar-event-appointment ${getStatusClass(event.status)}`
+                              : `calendar-event-appointment ${getStatusClass(
+                                  event.status,
+                                )}`
                           }`}
                           style={{
                             top: `${position.top}px`,
                             height: `${position.height}px`,
                           }}
                         >
-                          <strong>
-                            {event.hora_inicio.slice(0, 5)} -{" "}
-                            {event.hora_fim.slice(0, 5)}
-                          </strong>
+                          <div className="event-card-header">
+                            <strong>
+                              {event.hora_inicio.slice(0, 5)} -{" "}
+                              {event.hora_fim.slice(0, 5)}
+                            </strong>
+
+                            {event.pagamento_registrado ? (
+                              <span className="payment-badge">Pago</span>
+                            ) : null}
+                          </div>
 
                           <span>
                             {event.tipo_evento === "bloqueio"
-                              ? (event.motivo_bloqueio ?? "Horário bloqueado")
+                              ? event.motivo_bloqueio ?? "Horário bloqueado"
                               : event.cliente_nome}
                           </span>
 
@@ -502,25 +707,33 @@ export default function AgendaPage() {
                           return (
                             <article
                               key={event.id}
-                              onClick={() => {
-                                setSelectedEvent(event);
-                                setShowEventDetailsModal(true);
-                              }}
+                              data-auto={
+                                event.auto_bloqueio ? "true" : "false"
+                              }
+                              onClick={() => handleOpenEvent(event)}
                               className={`calendar-event ${
                                 event.tipo_evento === "bloqueio"
                                   ? "calendar-event-blocked"
-                                  : `calendar-event-appointment ${getStatusClass(event.status)}`
+                                  : `calendar-event-appointment ${getStatusClass(
+                                      event.status,
+                                    )}`
                               }`}
                               style={{
                                 top: `${pos.top}px`,
                                 height: `${pos.height}px`,
                               }}
                             >
-                              <strong>{event.hora_inicio.slice(0, 5)}</strong>
+                              <div className="event-card-header">
+                                <strong>{event.hora_inicio.slice(0, 5)}</strong>
+
+                                {event.pagamento_registrado ? (
+                                  <span className="payment-badge">Pago</span>
+                                ) : null}
+                              </div>
 
                               <span>
                                 {event.tipo_evento === "bloqueio"
-                                  ? "Bloqueado"
+                                  ? event.motivo_bloqueio ?? "Bloqueado"
                                   : event.cliente_nome}
                               </span>
 
@@ -541,10 +754,8 @@ export default function AgendaPage() {
               {events.map((event) => (
                 <article
                   key={event.id}
-                  onClick={() => {
-                    setSelectedEvent(event);
-                    setShowEventDetailsModal(true);
-                  }}
+                  data-auto={event.auto_bloqueio ? "true" : "false"}
+                  onClick={() => handleOpenEvent(event)}
                   className={`agenda-event ${
                     event.tipo_evento === "bloqueio"
                       ? "event-blocked"
@@ -560,17 +771,27 @@ export default function AgendaPage() {
                     <div className="event-title-row">
                       <h4>
                         {event.tipo_evento === "bloqueio"
-                          ? (event.motivo_bloqueio ?? "Horário bloqueado")
+                          ? event.motivo_bloqueio ?? "Horário bloqueado"
                           : event.cliente_nome}
                       </h4>
 
-                      <span className="event-status">{event.status}</span>
+                      <div className="event-title-badges">
+                        {event.pagamento_registrado ? (
+                          <span className="payment-badge">Pago</span>
+                        ) : null}
+
+                        {event.tipo_evento === "agendamento" ? (
+                          <span className="event-status">{event.status}</span>
+                        ) : null}
+                      </div>
                     </div>
 
                     <p>
                       {event.tipo_evento === "agendamento"
                         ? `${event.servico_nome} · ${event.cliente_telefone}`
-                        : "Indisponível para novos agendamentos."}
+                        : event.auto_bloqueio
+                          ? "Bloqueio automático pelo expediente."
+                          : "Indisponível para novos agendamentos."}
                     </p>
                   </div>
                 </article>
@@ -579,6 +800,7 @@ export default function AgendaPage() {
           )}
         </section>
       </section>
+
       <AppointmentModal
         open={showAppointmentModal}
         selectedDate={selectedDate}
@@ -600,6 +822,7 @@ export default function AgendaPage() {
           }
         }}
       />
+
       <BlockTimeModal
         open={showBlockTimeModal}
         selectedDate={selectedDate}
@@ -610,10 +833,14 @@ export default function AgendaPage() {
           } = await supabase.auth.getSession();
 
           if (session) {
-            await loadAgenda(session.user.id, selectedDate);
+            await loadAgenda(
+              selectedProfessionalId || session.user.id,
+              selectedDate,
+            );
           }
         }}
       />
+
       <EventDetailsModal
         open={showEventDetailsModal}
         event={selectedEvent}

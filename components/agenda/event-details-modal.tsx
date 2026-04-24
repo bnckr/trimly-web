@@ -21,6 +21,7 @@ type AgendaEvent = {
   desconto_percentual?: number | null;
   valor_final: number | null;
   motivo_bloqueio: string | null;
+  pagamento_registrado?: boolean;
   cliente_id?: string | null;
   servico_id?: string | null;
   cupom_id?: string | null;
@@ -43,6 +44,15 @@ function formatCurrency(value: number | null | undefined) {
     style: "currency",
     currency: "BRL",
   }).format(Number(value));
+}
+
+function formatPercentage(value: number | null | undefined) {
+  const numberValue = Number(value ?? 0);
+
+  return `${numberValue.toLocaleString("pt-BR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}%`;
 }
 
 function formatPaymentMethod(method: string) {
@@ -105,7 +115,6 @@ export function EventDetailsModal({
   const currentEvent = event;
 
   async function handleDelete() {
-
     const message =
       currentEvent.tipo_evento === "bloqueio"
         ? "Deseja excluir este bloqueio de horário?"
@@ -145,6 +154,8 @@ export function EventDetailsModal({
     currentEvent.tipo_evento === "agendamento" &&
     currentEvent.status === "finalizado";
 
+  const hasCoupon = Boolean(currentEvent.cupom_codigo_informado);
+
   return (
     <>
       <div className="modal-overlay">
@@ -173,7 +184,8 @@ export function EventDetailsModal({
             <div>
               <span>Horário</span>
               <strong>
-                {currentEvent.hora_inicio.slice(0, 5)} - {currentEvent.hora_fim.slice(0, 5)}
+                {currentEvent.hora_inicio.slice(0, 5)} -{" "}
+                {currentEvent.hora_fim.slice(0, 5)}
               </strong>
             </div>
 
@@ -189,33 +201,35 @@ export function EventDetailsModal({
                   <strong>{currentEvent.cliente_telefone}</strong>
                 </div>
 
-                <div>
-                  <span>Valor final</span>
-                  <strong>{formatCurrency(currentEvent.valor_final)}</strong>
-                </div>
-
-                {currentEvent.cupom_codigo_informado ? (
+                {hasCoupon ? (
                   <>
-                    <div>
-                      <span>Cupom aplicado</span>
-                      <strong>{currentEvent.cupom_codigo_informado}</strong>
-                    </div>
-
                     <div>
                       <span>Valor original</span>
                       <strong>
-                        {formatCurrency(
-                          currentEvent.valor_original ?? currentEvent.valor_final,
-                        )}
+                        {formatCurrency(currentEvent.valor_original)}
                       </strong>
                     </div>
 
                     <div>
                       <span>Desconto</span>
-                      <strong>{Number(currentEvent.desconto_percentual ?? 0)}%</strong>
+                      <strong>
+                        {formatPercentage(currentEvent.desconto_percentual)}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Valor final</span>
+                      <strong>
+                        {formatCurrency(currentEvent.valor_final)}
+                      </strong>
                     </div>
                   </>
-                ) : null}
+                ) : (
+                  <div>
+                    <span>Valor final</span>
+                    <strong>{formatCurrency(currentEvent.valor_final)}</strong>
+                  </div>
+                )}
 
                 {payment ? (
                   <div className="event-payment-summary">
@@ -293,7 +307,7 @@ export function EventDetailsModal({
               <button
                 type="button"
                 className="event-edit-button"
-                onClick={() => onEditAppointment(event)}
+                onClick={() => onEditAppointment(currentEvent)}
               >
                 Editar
               </button>

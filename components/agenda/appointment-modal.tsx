@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { validateAppointmentInsideWorkingHours } from "@/actions/working-hours";
+import { getAvailableSlots } from "@/actions/available-slots";
 import {
   registerCouponUsage,
   removeCouponUsageByAppointment,
@@ -115,7 +117,8 @@ export function AppointmentModal({
   const [horaInicio, setHoraInicio] = useState("");
   const [cupom, setCupom] = useState("");
   const [observacoes, setObservacoes] = useState("");
-
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
   const [couponPreview, setCouponPreview] = useState<CouponPreview | null>(
     null,
   );
@@ -201,6 +204,40 @@ export function AppointmentModal({
 
     loadData();
   }, [open, selectedDate, editingEvent]);
+
+  useEffect(() => {
+    async function loadAvailableSlots() {
+      setAvailableSlots([]);
+
+      if (!selectedService || !selectedDate) return;
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) return;
+
+      try {
+        setLoadingSlots(true);
+
+        const slots = await getAvailableSlots({
+          profissional_id: session.user.id,
+          data_agendamento: selectedDate,
+          duracao_minutos: selectedService.duracao_minutos,
+          editingAppointmentId: editingEvent?.id ?? null,
+        });
+
+        setAvailableSlots(slots);
+      } catch (error) {
+        console.error(error);
+        setAvailableSlots([]);
+      } finally {
+        setLoadingSlots(false);
+      }
+    }
+
+    loadAvailableSlots();
+  }, [selectedService, selectedDate, editingEvent?.id]);
 
   useEffect(() => {
     setCouponPreview(null);
@@ -292,6 +329,13 @@ export function AppointmentModal({
           data_agendamento: selectedDate,
         })) as CouponPreview;
       }
+
+      await validateAppointmentInsideWorkingHours({
+        profissional_id: session.user.id,
+        data_agendamento: selectedDate,
+        hora_inicio: horaInicio,
+        hora_fim: horaFim,
+      });
 
       const valorOriginal = finalCouponPreview
         ? finalCouponPreview.valorOriginal
@@ -432,12 +476,26 @@ export function AppointmentModal({
           <div className="time-grid">
             <label>
               Hora inicial
-              <input
-                type="time"
+              <select
                 value={horaInicio}
                 onChange={(e) => setHoraInicio(e.target.value)}
                 required
-              />
+                disabled={!selectedService || loadingSlots}
+              >
+                <option value="">
+                  {!selectedService
+                    ? "Selecione um serviço primeiro"
+                    : loadingSlots
+                      ? "Carregando horários..."
+                      : "Selecione um horário"}
+                </option>
+
+                {availableSlots.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label>
@@ -445,6 +503,12 @@ export function AppointmentModal({
               <input type="time" value={horaFim} disabled />
             </label>
           </div>
+
+          {selectedService && !loadingSlots && availableSlots.length === 0 ? (
+            <div className="time-conflict">
+              Nenhum horário disponível para este serviço nesta data.
+            </div>
+          ) : null}
 
           {horaInicio && horaFim && !hasConflict ? (
             <div className="time-success">
