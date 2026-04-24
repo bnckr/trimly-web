@@ -10,4 +10,5 @@ export type Profile = {
   ativo: boolean
   created_at: string
   updated_at: string
+  avatar_url: string | null
 }
