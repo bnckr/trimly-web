@@ -461,11 +461,30 @@
   font-size: 13px;
 }
 
-.calendar-day-view {
+.calendar-day-scroll {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 24px;
+  padding-bottom: 12px;
+}
+
+.calendar-single-day-view {
+  min-width: 720px;
+}
+
+.calendar-single-day-header {
   display: grid;
   grid-template-columns: 82px 1fr;
-  gap: 14px;
-  margin-top: 22px;
+  margin-bottom: 8px;
+}
+
+.calendar-single-day-body {
+  display: grid;
+  grid-template-columns: 82px 1fr;
+}
+
+.calendar-single-day-body .calendar-day-column {
+  min-height: 1248px;
 }
 
 .calendar-time-column {
@@ -510,30 +529,40 @@
   left: 16px;
   right: 16px;
   border-radius: 16px;
-  padding: 12px 14px;
+  padding: 8px 14px;
   overflow: hidden;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  justify-content: center;
+  gap: 2px;
 }
 
 .calendar-event strong {
   color: #000000;
   font-size: 14px;
   font-weight: 800;
+  line-height: 1.1;
 }
 
 .calendar-event span {
   color: #000000;
   font-family: 'Afacad Flux', sans-serif;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .calendar-event small {
   color: #878484;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .calendar-event-appointment {
@@ -544,6 +573,69 @@
 .calendar-event-blocked {
   background: #eeeeee;
   border-left: 6px solid #000000;
+}
+
+.calendar-week-scroll {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 24px;
+  padding-bottom: 12px;
+}
+
+.calendar-week-view {
+  min-width: 1120px;
+}
+
+.calendar-week-header {
+  display: grid;
+  grid-template-columns: 82px repeat(7, minmax(140px, 1fr));
+  margin-bottom: 8px;
+}
+
+.calendar-week-body {
+  display: grid;
+  grid-template-columns: 82px repeat(7, minmax(140px, 1fr));
+}
+
+.calendar-day-column {
+  position: relative;
+  min-height: 1248px;
+  border-left: 1px solid #c7dae6;
+  background: #ffffff;
+}
+
+.calendar-day-column:last-child {
+  border-right: 1px solid #c7dae6;
+}
+
+.day-col-header {
+  text-align: center;
+  font-weight: 800;
+  color: #000;
+  font-size: 14px;
+}
+
+.calendar-day-column {
+  position: relative;
+  border-left: 1px solid #c7dae6;
+  background: #fff;
+}
+
+.calendar-day-column .calendar-grid-line {
+  height: 48px;
+}
+
+.calendar-day-column .calendar-event {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  border-radius: 12px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.calendar-day-column .calendar-event span {
+  font-size: 12px;
 }
 
 @media (max-width: 720px) {

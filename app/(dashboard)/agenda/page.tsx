@@ -147,7 +147,7 @@ export default function AgendaPage() {
     const top = ((startMinutes - dayStart) / 30) * slotHeight;
     const height = Math.max(
       ((endMinutes - startMinutes) / 30) * slotHeight,
-      48,
+      56,
     );
 
     return { top, height };
@@ -196,6 +196,44 @@ export default function AgendaPage() {
       start: start.toLocaleDateString("en-CA"),
       end: end.toLocaleDateString("en-CA"),
     };
+  }
+
+  function getWeekDays(dateString: string) {
+    const [year, month, day] = dateString.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+
+    const start = new Date(date);
+    const dayOfWeek = start.getDay();
+    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    start.setDate(start.getDate() + diff);
+
+    const days = [];
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+
+      days.push({
+        date: d.toLocaleDateString("en-CA"),
+        label: d.toLocaleDateString("pt-BR", {
+          weekday: "short",
+          day: "2-digit",
+        }),
+      });
+    }
+
+    return days;
+  }
+
+  function groupEventsByDay(events: AgendaEvent[]) {
+    return events.reduce<Record<string, AgendaEvent[]>>((acc, event) => {
+      const date = event.data_referencia;
+
+      if (!acc[date]) acc[date] = [];
+
+      acc[date].push(event);
+      return acc;
+    }, {});
   }
 
   function formatDateBR(dateString: string) {
@@ -326,19 +364,26 @@ export default function AgendaPage() {
                 nesta tela.
               </p>
             </div>
-          ) : (
-            <div className="agenda-list">
-              {filterType === "dia" ? (
-                <div className="calendar-day-view">
+          ) : filterType === "dia" ? (
+            <div className="calendar-day-scroll">
+              <div className="calendar-single-day-view">
+                <div className="calendar-single-day-header">
+                  <div className="time-col" />
+                  <div className="day-col-header">
+                    {formatDateBR(selectedDate)}
+                  </div>
+                </div>
+
+                <div className="calendar-single-day-body">
                   <div className="calendar-time-column">
                     {generateTimeSlots().map((slot) => (
-                      <div className="calendar-time-slot" key={slot}>
+                      <div key={slot} className="calendar-time-slot">
                         {slot.endsWith(":00") ? slot : ""}
                       </div>
                     ))}
                   </div>
 
-                  <div className="calendar-grid">
+                  <div className="calendar-day-column">
                     {generateTimeSlots().map((slot) => (
                       <div
                         key={slot}
@@ -386,43 +431,119 @@ export default function AgendaPage() {
                     })}
                   </div>
                 </div>
-              ) : (
-                <div className="agenda-list">
-                  {events.map((event) => (
-                    <article
-                      key={event.id}
-                      className={`agenda-event ${
-                        event.tipo_evento === "bloqueio"
-                          ? "event-blocked"
-                          : "event-appointment"
-                      }`}
-                    >
-                      <div className="event-time">
-                        <strong>{event.hora_inicio.slice(0, 5)}</strong>
-                        <span>{event.hora_fim.slice(0, 5)}</span>
-                      </div>
+              </div>
+            </div>
+          ) : filterType === "semana" ? (
+            <div className="calendar-week-scroll">
+              <div className="calendar-week-view">
+                <div className="calendar-week-header">
+                  <div className="time-col" />
 
-                      <div className="event-content">
-                        <div className="event-title-row">
-                          <h4>
-                            {event.tipo_evento === "bloqueio"
-                              ? (event.motivo_bloqueio ?? "Horário bloqueado")
-                              : event.cliente_nome}
-                          </h4>
-
-                          <span className="event-status">{event.status}</span>
-                        </div>
-
-                        <p>
-                          {event.tipo_evento === "agendamento"
-                            ? `${event.servico_nome} · ${event.cliente_telefone}`
-                            : "Indisponível para novos agendamentos."}
-                        </p>
-                      </div>
-                    </article>
+                  {getWeekDays(selectedDate).map((day) => (
+                    <div key={day.date} className="day-col-header">
+                      {day.label}
+                    </div>
                   ))}
                 </div>
-              )}
+
+                <div className="calendar-week-body">
+                  <div className="calendar-time-column">
+                    {generateTimeSlots().map((slot) => (
+                      <div key={slot} className="calendar-time-slot">
+                        {slot.endsWith(":00") ? slot : ""}
+                      </div>
+                    ))}
+                  </div>
+
+                  {getWeekDays(selectedDate).map((day) => {
+                    const eventsByDay =
+                      groupEventsByDay(events)[day.date] || [];
+
+                    return (
+                      <div key={day.date} className="calendar-day-column">
+                        {generateTimeSlots().map((slot) => (
+                          <div
+                            key={slot}
+                            className={`calendar-grid-line ${
+                              slot.endsWith(":00") ? "full-hour" : "half-hour"
+                            }`}
+                          />
+                        ))}
+
+                        {eventsByDay.map((event) => {
+                          const pos = getEventPosition(
+                            event.hora_inicio,
+                            event.hora_fim,
+                          );
+
+                          return (
+                            <article
+                              key={event.id}
+                              className={`calendar-event ${
+                                event.tipo_evento === "bloqueio"
+                                  ? "calendar-event-blocked"
+                                  : "calendar-event-appointment"
+                              }`}
+                              style={{
+                                top: `${pos.top}px`,
+                                height: `${pos.height}px`,
+                              }}
+                            >
+                              <strong>{event.hora_inicio.slice(0, 5)}</strong>
+
+                              <span>
+                                {event.tipo_evento === "bloqueio"
+                                  ? "Bloqueado"
+                                  : event.cliente_nome}
+                              </span>
+
+                              {event.tipo_evento === "agendamento" ? (
+                                <small>{event.servico_nome}</small>
+                              ) : null}
+                            </article>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="agenda-list">
+              {events.map((event) => (
+                <article
+                  key={event.id}
+                  className={`agenda-event ${
+                    event.tipo_evento === "bloqueio"
+                      ? "event-blocked"
+                      : "event-appointment"
+                  }`}
+                >
+                  <div className="event-time">
+                    <strong>{event.hora_inicio.slice(0, 5)}</strong>
+                    <span>{event.hora_fim.slice(0, 5)}</span>
+                  </div>
+
+                  <div className="event-content">
+                    <div className="event-title-row">
+                      <h4>
+                        {event.tipo_evento === "bloqueio"
+                          ? (event.motivo_bloqueio ?? "Horário bloqueado")
+                          : event.cliente_nome}
+                      </h4>
+
+                      <span className="event-status">{event.status}</span>
+                    </div>
+
+                    <p>
+                      {event.tipo_evento === "agendamento"
+                        ? `${event.servico_nome} · ${event.cliente_telefone}`
+                        : "Indisponível para novos agendamentos."}
+                    </p>
+                  </div>
+                </article>
+              ))}
             </div>
           )}
         </section>
