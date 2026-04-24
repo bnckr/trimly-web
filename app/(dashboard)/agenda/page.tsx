@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { AppointmentModal } from "@/components/agenda/appointment-modal";
 import { BlockTimeModal } from "@/components/agenda/block-time-modal";
+import { EventDetailsModal } from "@/components/agenda/event-details-modal";
 
 type Profile = {
   nome: string;
@@ -31,7 +32,13 @@ type AgendaEvent = {
   servico_nome: string | null;
   valor_final: number | null;
   motivo_bloqueio: string | null;
+
+  cliente_id?: string | null;
+  servico_id?: string | null;
+  cupom_codigo_informado?: string | null;
+  observacoes?: string | null;
 };
+
 
 function getToday() {
   const today = new Date();
@@ -57,6 +64,10 @@ export default function AgendaPage() {
   const [loading, setLoading] = useState(true);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showBlockTimeModal, setShowBlockTimeModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<AgendaEvent | null>(null);
+  const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
+  const [editingAppointment, setEditingAppointment] =
+    useState<AgendaEvent | null>(null);
 
   useEffect(() => {
     async function loadPage() {
@@ -276,6 +287,14 @@ export default function AgendaPage() {
     return <main className="agenda-loading">Carregando agenda...</main>;
   }
 
+  function getStatusClass(status: string) {
+    if (status === "finalizado") return "status-finalizado";
+    if (status === "em_atendimento") return "status-atendimento";
+    if (status === "cancelado" || status === "faltou") return "status-problema";
+    if (status === "confirmado") return "status-confirmado";
+    return "status-agendado";
+  }
+
   return (
     <main className="agenda-shell">
       <Sidebar />
@@ -402,10 +421,14 @@ export default function AgendaPage() {
                       return (
                         <article
                           key={event.id}
+                          onClick={() => {
+                            setSelectedEvent(event);
+                            setShowEventDetailsModal(true);
+                          }}
                           className={`calendar-event ${
                             event.tipo_evento === "bloqueio"
                               ? "calendar-event-blocked"
-                              : "calendar-event-appointment"
+                              : `calendar-event-appointment ${getStatusClass(event.status)}`
                           }`}
                           style={{
                             top: `${position.top}px`,
@@ -479,10 +502,14 @@ export default function AgendaPage() {
                           return (
                             <article
                               key={event.id}
+                              onClick={() => {
+                                setSelectedEvent(event);
+                                setShowEventDetailsModal(true);
+                              }}
                               className={`calendar-event ${
                                 event.tipo_evento === "bloqueio"
                                   ? "calendar-event-blocked"
-                                  : "calendar-event-appointment"
+                                  : `calendar-event-appointment ${getStatusClass(event.status)}`
                               }`}
                               style={{
                                 top: `${pos.top}px`,
@@ -514,10 +541,14 @@ export default function AgendaPage() {
               {events.map((event) => (
                 <article
                   key={event.id}
+                  onClick={() => {
+                    setSelectedEvent(event);
+                    setShowEventDetailsModal(true);
+                  }}
                   className={`agenda-event ${
                     event.tipo_evento === "bloqueio"
                       ? "event-blocked"
-                      : "event-appointment"
+                      : `event-appointment ${getStatusClass(event.status)}`
                   }`}
                 >
                   <div className="event-time">
@@ -551,14 +582,21 @@ export default function AgendaPage() {
       <AppointmentModal
         open={showAppointmentModal}
         selectedDate={selectedDate}
-        onClose={() => setShowAppointmentModal(false)}
+        editingEvent={editingAppointment}
+        onClose={() => {
+          setShowAppointmentModal(false);
+          setEditingAppointment(null);
+        }}
         onSaved={async () => {
           const {
             data: { session },
           } = await supabase.auth.getSession();
 
           if (session) {
-            await loadAgenda(session.user.id, selectedDate);
+            await loadAgenda(
+              selectedProfessionalId || session.user.id,
+              selectedDate,
+            );
           }
         }}
       />
@@ -574,6 +612,32 @@ export default function AgendaPage() {
           if (session) {
             await loadAgenda(session.user.id, selectedDate);
           }
+        }}
+      />
+      <EventDetailsModal
+        open={showEventDetailsModal}
+        event={selectedEvent}
+        onClose={() => {
+          setShowEventDetailsModal(false);
+          setSelectedEvent(null);
+        }}
+        onDeleted={async () => {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+
+          if (session) {
+            await loadAgenda(
+              selectedProfessionalId || session.user.id,
+              selectedDate,
+            );
+          }
+        }}
+        onEditAppointment={(event) => {
+          setShowEventDetailsModal(false);
+          setSelectedEvent(null);
+          setEditingAppointment(event);
+          setShowAppointmentModal(true);
         }}
       />
     </main>

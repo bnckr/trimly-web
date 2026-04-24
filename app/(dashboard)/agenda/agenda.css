@@ -638,6 +638,150 @@
   font-size: 12px;
 }
 
+.calendar-event,
+.agenda-event {
+  cursor: pointer;
+}
+
+.event-details-modal {
+  width: 100%;
+  max-width: 560px;
+  background: #ffffff;
+  border-radius: 28px;
+  padding: 30px;
+  box-shadow: 12px 18px 44px rgba(0, 0, 0, 0.28);
+  font-family: 'Inter', sans-serif;
+}
+
+.event-details-content {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.event-details-content div {
+  background: #f4f8fb;
+  border-radius: 18px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 4px;
+}
+
+.event-details-content span {
+  color: #878484;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.event-details-content strong {
+  color: #000000;
+  font-size: 16px;
+}
+
+.event-details-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.event-edit-button,
+.event-delete-button {
+  height: 44px;
+  border: none;
+  border-radius: 999px;
+  padding: 0 22px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.event-edit-button {
+  background: #71bbef;
+  color: #ffffff;
+}
+
+.event-delete-button {
+  background: #000000;
+  color: #ffffff;
+}
+
+.event-status-actions {
+  margin-top: 22px;
+}
+
+.event-status-actions p {
+  margin: 0 0 10px;
+  color: #878484;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.event-status-actions div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-button {
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  padding: 0 12px;
+  background: #f4f8fb;
+  color: #878484;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.status-button.active {
+  background: #2797e5;
+  color: #ffffff;
+}
+
+.status-button[data-status="faltou"],
+.status-button[data-status="cancelado"] {
+  background: #000000;
+  color: #ffffff;
+}
+
+/* PADRÃO (agendado) */
+.status-agendado {
+  background: #e8f5ff;
+  border-left: 6px solid #2797e5;
+}
+
+/* CONFIRMADO */
+.status-confirmado {
+  background: #dff3ff;
+  border-left: 6px solid #71bbef;
+}
+
+/* EM ATENDIMENTO (amarelo) */
+.status-atendimento {
+  background: #fff6d8;
+  border-left: 6px solid #f4b400;
+}
+
+/* FINALIZADO (verde) */
+.status-finalizado {
+  background: #e6f7ec;
+  border-left: 6px solid #2ecc71;
+}
+
+/* CANCELADO / FALTOU (vermelho) */
+.status-problema {
+  background: #fde8e8;
+  border-left: 6px solid #e74c3c;
+}
+
+/* BLOQUEIO continua separado */
+.calendar-event-blocked {
+  background: #eeeeee;
+  border-left: 6px solid #000000;
+}
+
 @media (max-width: 720px) {
   .calendar-day-view {
     grid-template-columns: 58px 1fr;

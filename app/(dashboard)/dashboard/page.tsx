@@ -51,14 +51,14 @@ function getToday() {
 }
 
 function formatDateBR(dateString: string) {
-  const [year, month, day] = dateString.split('-').map(Number)
-  const date = new Date(year, month - 1, day)
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
 
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  })
+  return date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 function getDateRange(
@@ -192,10 +192,18 @@ export default function DashboardPage() {
         .gte("data_bloqueio", range.start)
         .lte("data_bloqueio", range.end);
 
-      const { data: birthdayClients } = await supabase
-        .from("v_clientes_aniversariantes_mes")
+      const currentMonth = new Date().getMonth() + 1;
+
+      const { data: allClients } = await supabase
+        .from("clients")
         .select("id, nome, telefone, data_nascimento")
-        .limit(6);
+        .eq("ativo", true)
+        .not("data_nascimento", "is", null);
+
+      const birthdayClients = (allClients ?? []).filter((client) => {
+        const month = Number(client.data_nascimento?.split("-")[1]);
+        return month === currentMonth;
+      });
 
       const validAppointments = (appointmentsToday ?? []).filter((item) =>
         ["agendado", "confirmado", "em_atendimento", "finalizado"].includes(
