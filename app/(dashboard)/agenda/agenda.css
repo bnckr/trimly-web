@@ -1,11 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Afacad+Flux:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Afacad+Flux:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap");
 
 .agenda-loading {
   min-height: 100vh;
   display: grid;
   place-items: center;
   background: #c7dae6;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 .agenda-shell {
@@ -13,7 +13,7 @@
   display: grid;
   grid-template-columns: 280px 1fr;
   background: #c7dae6;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 .agenda-main {
@@ -42,7 +42,7 @@
 
 .agenda-toolbar h2 {
   margin: 0;
-  font-family: 'Afacad Flux', sans-serif;
+  font-family: "Afacad Flux", sans-serif;
   font-size: 40px;
   font-weight: 800;
   color: #000000;
@@ -59,7 +59,7 @@
   border-radius: 999px;
   border: 1px solid #c7dae6;
   padding: 0 16px;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   outline: none;
 }
 
@@ -68,7 +68,7 @@
   border-radius: 999px;
   border: 1px solid #c7dae6;
   padding: 0 16px;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   outline: none;
   background: #ffffff;
   color: #000000;
@@ -126,7 +126,7 @@
 .agenda-panel-header h3 {
   margin: 0;
   color: #000000;
-  font-family: 'Afacad Flux', sans-serif;
+  font-family: "Afacad Flux", sans-serif;
   font-size: 32px;
   font-weight: 800;
 }
@@ -159,7 +159,7 @@
 .agenda-empty h3 {
   margin: 0 0 8px;
   color: #000000;
-  font-family: 'Afacad Flux', sans-serif;
+  font-family: "Afacad Flux", sans-serif;
   font-size: 32px;
   font-weight: 800;
 }
@@ -204,7 +204,7 @@
 }
 
 .event-time strong {
-  font-family: 'Afacad Flux', sans-serif;
+  font-family: "Afacad Flux", sans-serif;
   font-size: 30px;
   line-height: 1;
 }
@@ -231,7 +231,7 @@
 .event-title-row h4 {
   margin: 0;
   color: #000000;
-  font-family: 'Afacad Flux', sans-serif;
+  font-family: "Afacad Flux", sans-serif;
   font-size: 26px;
   font-weight: 800;
 }
@@ -278,7 +278,7 @@
   border-radius: 28px;
   padding: 30px;
   box-shadow: 12px 18px 44px rgba(0, 0, 0, 0.28);
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 .modal-header {
@@ -299,7 +299,7 @@
 .modal-header h2 {
   margin: 0;
   color: #000000;
-  font-family: 'Afacad Flux', sans-serif;
+  font-family: "Afacad Flux", sans-serif;
   font-size: 38px;
   font-weight: 800;
 }
@@ -336,7 +336,7 @@
   border: 1.5px solid #c7dae6;
   border-radius: 14px;
   padding: 0 16px;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 15px;
   outline: none;
   background: #ffffff;
@@ -395,7 +395,7 @@
   border: none;
   border-radius: 999px;
   padding: 0 22px;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 14px;
   font-weight: 800;
   cursor: pointer;
@@ -547,7 +547,7 @@
 
 .calendar-event span {
   color: #000000;
-  font-family: 'Afacad Flux', sans-serif;
+  font-family: "Afacad Flux", sans-serif;
   font-size: 17px;
   font-weight: 800;
   line-height: 1.1;
@@ -650,7 +650,18 @@
   border-radius: 28px;
   padding: 30px;
   box-shadow: 12px 18px 44px rgba(0, 0, 0, 0.28);
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.event-details-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.event-details-modal::-webkit-scrollbar-thumb {
+  background: #c7dae6;
+  border-radius: 999px;
 }
 
 .event-details-content {
@@ -812,6 +823,123 @@
 
 .coupon-appointment-preview strong {
   color: #000000;
+}
+
+.event-payment-button {
+  height: 44px;
+  border: none;
+  border-radius: 999px;
+  padding: 0 22px;
+  background: #71bbef;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.event-payment-button:hover {
+  background: #2797e5;
+}
+
+.event-payment-summary {
+  border: 1.5px solid #c7dae6;
+}
+
+.event-payment-summary small {
+  color: #878484;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.payment-modal {
+  width: 100%;
+  max-width: 620px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 28px;
+  padding: 30px;
+  box-shadow: 12px 18px 44px rgba(0, 0, 0, 0.28);
+  font-family: "Inter", sans-serif;
+}
+
+.payment-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.payment-modal::-webkit-scrollbar-thumb {
+  background: #c7dae6;
+  border-radius: 999px;
+}
+
+.payment-summary-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.payment-summary-header div,
+.payment-preview-grid div {
+  background: #f4f8fb;
+  border-radius: 18px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 4px;
+}
+
+.payment-summary-header span,
+.payment-preview-grid span {
+  color: #878484;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.payment-summary-header strong,
+.payment-preview-grid strong {
+  color: #000000;
+  font-size: 16px;
+}
+
+.payment-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.payment-delete-button {
+  height: 46px;
+  border: none;
+  border-radius: 999px;
+  padding: 0 22px;
+  background: #fde8e8;
+  color: #e74c3c;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.payment-delete-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .payment-summary-header,
+  .payment-preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .event-details-actions {
+    flex-direction: column;
+  }
+
+  .event-edit-button,
+  .event-payment-button,
+  .event-delete-button {
+    width: 100%;
+  }
 }
 
 @media (max-width: 720px) {
