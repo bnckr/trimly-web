@@ -6,7 +6,6 @@ import { supabase } from "@/lib/supabase";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
-import "./dashboard.css";
 
 type Profile = {
   nome: string;

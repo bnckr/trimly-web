@@ -7,7 +7,6 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { AppointmentModal } from "@/components/agenda/appointment-modal";
 import { BlockTimeModal } from "@/components/agenda/block-time-modal";
-import "./agenda.css";
 
 type Profile = {
   nome: string;

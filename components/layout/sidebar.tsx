@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 const menuItems = [
   { label: 'Dashboard', href: '/dashboard' },
@@ -8,10 +11,11 @@ const menuItems = [
   { label: 'Cupons', href: '/cupons' },
   { label: 'Relatórios', href: '/relatorios' },
   { label: 'Perfil', href: '/perfil' },
-  { label: 'Configurações', href: '/configuracoes' },
 ]
 
 export function Sidebar() {
+  const pathname = usePathname()
+
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
@@ -19,11 +23,20 @@ export function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
-        {menuItems.map((item) => (
-          <Link key={item.href} href={item.href} className="sidebar-link">
-            {item.label}
-          </Link>
-        ))}
+        {menuItems.map((item) => {
+          const isActive = pathname === item.href
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`sidebar-link ${isActive ? 'active' : ''}`}
+            >
+              <span className="sidebar-indicator" />
+              {item.label}
+            </Link>
+          )
+        })}
       </nav>
     </aside>
   )

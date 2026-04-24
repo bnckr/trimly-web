@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { ClientModal } from '@/components/clientes/client-modal'
-import './clientes.css'
 
 type Profile = {
   nome: string
