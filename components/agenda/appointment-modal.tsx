@@ -9,6 +9,9 @@ import {
   removeCouponUsageByAppointment,
   validateCouponForAppointment,
 } from "@/actions/coupons";
+import { useToast } from "@/components/ui/toast-provider";
+
+const { showToast } = useToast();
 
 type Client = {
   id: string;
@@ -403,12 +406,13 @@ export function AppointmentModal({
       setObservacoes("");
       setCouponPreview(null);
       setDayEvents([]);
-
+      showToast("Agendamento salvo com sucesso", "success");
       onSaved();
       onClose();
     } catch (error) {
-      setErro(
-        error instanceof Error ? error.message : "Erro ao salvar agendamento.",
+      showToast(
+        error instanceof Error ? error.message : "Erro ao salvar agendamento",
+        "error",
       );
     } finally {
       setLoading(false);

@@ -18,6 +18,7 @@ type Profile = {
 type Professional = {
   id: string;
   nome: string;
+  cor_agenda: string | null;
 };
 
 type AgendaEvent = {
@@ -42,6 +43,7 @@ type AgendaEvent = {
   cupom_id?: string | null;
   cupom_codigo_informado?: string | null;
   observacoes?: string | null;
+  cor_agenda?: string | null;
 };
 
 type WorkingHour = {
@@ -290,7 +292,11 @@ export default function AgendaPage() {
     };
   }
 
-  async function loadAgenda(professionalId: string, date: string, type = filterType) {
+  async function loadAgenda(
+    professionalId: string,
+    date: string,
+    type = filterType,
+  ) {
     const range = getDateRange(date, type);
 
     const { data: agendaData, error } = await supabase
@@ -336,7 +342,17 @@ export default function AgendaPage() {
       return a.hora_inicio.localeCompare(b.hora_inicio);
     });
 
-    const agendaWithPayment = await attachPaymentStatus(agendaWithMirror);
+    const professionalColor =
+      professionals.find((item) => item.id === professionalId)?.cor_agenda ??
+      "#71bbef";
+
+    const agendaWithColor = agendaWithMirror.map((event) => ({
+      ...event,
+      cor_agenda:
+        event.tipo_evento === "agendamento" ? professionalColor : null,
+    }));
+
+    const agendaWithPayment = await attachPaymentStatus(agendaWithColor);
 
     setEvents(agendaWithPayment);
   }
@@ -368,7 +384,7 @@ export default function AgendaPage() {
 
       const { data: professionalsData } = await supabase
         .from("profiles")
-        .select("id, nome")
+        .select("id, nome, cor_agenda")
         .eq("ativo", true)
         .order("nome", { ascending: true });
 
@@ -569,7 +585,10 @@ export default function AgendaPage() {
               }{" "}
               clientes
               {" / "}
-              {events.filter((event) => event.tipo_evento === "bloqueio").length}{" "}
+              {
+                events.filter((event) => event.tipo_evento === "bloqueio")
+                  .length
+              }{" "}
               bloqueios
             </span>
           </div>
@@ -629,10 +648,13 @@ export default function AgendaPage() {
                                   event.status,
                                 )}`
                           }`}
-                          style={{
-                            top: `${position.top}px`,
-                            height: `${position.height}px`,
-                          }}
+                          style={
+                            {
+                              top: `${position.top}px`,
+                              height: `${position.height}px`,
+                              "--event-color": event.cor_agenda ?? "#71bbef",
+                            } as React.CSSProperties
+                          }
                         >
                           <div className="event-card-header">
                             <strong>
@@ -647,7 +669,7 @@ export default function AgendaPage() {
 
                           <span>
                             {event.tipo_evento === "bloqueio"
-                              ? event.motivo_bloqueio ?? "Horário bloqueado"
+                              ? (event.motivo_bloqueio ?? "Horário bloqueado")
                               : event.cliente_nome}
                           </span>
 
@@ -707,9 +729,7 @@ export default function AgendaPage() {
                           return (
                             <article
                               key={event.id}
-                              data-auto={
-                                event.auto_bloqueio ? "true" : "false"
-                              }
+                              data-auto={event.auto_bloqueio ? "true" : "false"}
                               onClick={() => handleOpenEvent(event)}
                               className={`calendar-event ${
                                 event.tipo_evento === "bloqueio"
@@ -733,7 +753,7 @@ export default function AgendaPage() {
 
                               <span>
                                 {event.tipo_evento === "bloqueio"
-                                  ? event.motivo_bloqueio ?? "Bloqueado"
+                                  ? (event.motivo_bloqueio ?? "Bloqueado")
                                   : event.cliente_nome}
                               </span>
 
@@ -761,6 +781,11 @@ export default function AgendaPage() {
                       ? "event-blocked"
                       : `event-appointment ${getStatusClass(event.status)}`
                   }`}
+                  style={
+                    {
+                      "--event-color": event.cor_agenda ?? "#71bbef",
+                    } as React.CSSProperties
+                  }
                 >
                   <div className="event-time">
                     <strong>{event.hora_inicio.slice(0, 5)}</strong>
@@ -771,7 +796,7 @@ export default function AgendaPage() {
                     <div className="event-title-row">
                       <h4>
                         {event.tipo_evento === "bloqueio"
-                          ? event.motivo_bloqueio ?? "Horário bloqueado"
+                          ? (event.motivo_bloqueio ?? "Horário bloqueado")
                           : event.cliente_nome}
                       </h4>
 

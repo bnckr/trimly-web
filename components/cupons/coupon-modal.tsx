@@ -1,15 +1,18 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { createCoupon, updateCoupon } from '@/actions/coupons'
-import type { Coupon } from '@/types/coupon'
+import { useEffect, useState } from "react";
+import { createCoupon, updateCoupon } from "@/actions/coupons";
+import type { Coupon } from "@/types/coupon";
+import { useToast } from "@/components/ui/toast-provider";
 
 type CouponModalProps = {
-  open: boolean
-  coupon: Coupon | null
-  onClose: () => void
-  onSaved: () => void | Promise<void>
-}
+  open: boolean;
+  coupon: Coupon | null;
+  onClose: () => void;
+  onSaved: () => void | Promise<void>;
+};
+
+const { showToast } = useToast();
 
 export function CouponModal({
   open,
@@ -17,43 +20,43 @@ export function CouponModal({
   onClose,
   onSaved,
 }: CouponModalProps) {
-  const [nomeCupom, setNomeCupom] = useState('')
-  const [percentualDesconto, setPercentualDesconto] = useState('')
-  const [ativo, setAtivo] = useState(true)
-  const [usoAniversario, setUsoAniversario] = useState(false)
-  const [validadeInicial, setValidadeInicial] = useState('')
-  const [validadeFinal, setValidadeFinal] = useState('')
-  const [quantidadeMaximaUso, setQuantidadeMaximaUso] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [nomeCupom, setNomeCupom] = useState("");
+  const [percentualDesconto, setPercentualDesconto] = useState("");
+  const [ativo, setAtivo] = useState(true);
+  const [usoAniversario, setUsoAniversario] = useState(false);
+  const [validadeInicial, setValidadeInicial] = useState("");
+  const [validadeFinal, setValidadeFinal] = useState("");
+  const [quantidadeMaximaUso, setQuantidadeMaximaUso] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
 
-    setNomeCupom(coupon?.nome_cupom ?? '')
+    setNomeCupom(coupon?.nome_cupom ?? "");
     setPercentualDesconto(
       coupon?.percentual_desconto !== undefined
         ? String(coupon.percentual_desconto)
-        : ''
-    )
-    setAtivo(coupon?.ativo ?? true)
-    setUsoAniversario(coupon?.uso_aniversario ?? false)
-    setValidadeInicial(coupon?.validade_inicial ?? '')
-    setValidadeFinal(coupon?.validade_final ?? '')
+        : "",
+    );
+    setAtivo(coupon?.ativo ?? true);
+    setUsoAniversario(coupon?.uso_aniversario ?? false);
+    setValidadeInicial(coupon?.validade_inicial ?? "");
+    setValidadeFinal(coupon?.validade_final ?? "");
     setQuantidadeMaximaUso(
       coupon?.quantidade_maxima_uso !== null &&
         coupon?.quantidade_maxima_uso !== undefined
         ? String(coupon.quantidade_maxima_uso)
-        : ''
-    )
-  }, [open, coupon])
+        : "",
+    );
+  }, [open, coupon]);
 
-  if (!open) return null
+  if (!open) return null;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+    event.preventDefault();
 
     try {
-      setSaving(true)
+      setSaving(true);
 
       const payload = {
         nome_cupom: nomeCupom,
@@ -65,20 +68,23 @@ export function CouponModal({
         quantidade_maxima_uso: quantidadeMaximaUso
           ? Number(quantidadeMaximaUso)
           : null,
-      }
+      };
 
       if (coupon) {
-        await updateCoupon(coupon.id, payload)
+        await updateCoupon(coupon.id, payload);
       } else {
-        await createCoupon(payload)
+        await createCoupon(payload);
       }
-
-      await onSaved()
-      onClose()
+      showToast("Cupom salvo com sucesso", "success");
+      await onSaved();
+      onClose();
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro ao salvar cupom.')
+      showToast(
+        error instanceof Error ? error.message : "Erro ao salvar cupom",
+        "error",
+      );
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -88,9 +94,9 @@ export function CouponModal({
         <div className="modal-header">
           <div>
             <p className="modal-eyebrow">
-              {coupon ? 'Editar cupom' : 'Novo cupom'}
+              {coupon ? "Editar cupom" : "Novo cupom"}
             </p>
-            <h2>{coupon ? coupon.nome_cupom : 'Cadastrar cupom'}</h2>
+            <h2>{coupon ? coupon.nome_cupom : "Cadastrar cupom"}</h2>
           </div>
 
           <button type="button" className="modal-close" onClick={onClose}>
@@ -185,11 +191,11 @@ export function CouponModal({
             </button>
 
             <button type="submit" className="primary-button" disabled={saving}>
-              {saving ? 'Salvando...' : 'Salvar'}
+              {saving ? "Salvando..." : "Salvar"}
             </button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }

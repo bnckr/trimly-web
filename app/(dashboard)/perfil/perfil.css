@@ -41,12 +41,19 @@
 }
 
 .perfil-avatar img {
-  width: 82px;
-  height: 82px;
-  border-radius: 999px;
+  width: 84px;
+  height: 84px;
+  border-radius: 22px;
   object-fit: cover;
-  background: #c7dae6;
-  border: 3px solid #71bbef;
+
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.12);
+
+  transition: 0.2s ease;
+}
+
+.perfil-avatar img:hover {
+  transform: scale(1.03);
 }
 
 .perfil-avatar input {

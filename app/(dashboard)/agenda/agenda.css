@@ -986,6 +986,22 @@
   cursor: not-allowed;
 }
 
+.calendar-event-appointment {
+  border-left: 6px solid var(--event-color, #71bbef);
+}
+
+.agenda-event.event-appointment {
+  border-left: 6px solid var(--event-color, #71bbef);
+}
+
+.calendar-event-appointment .event-card-header strong {
+  color: #000000;
+}
+
+.event-appointment .event-status {
+  border-color: var(--event-color, #71bbef);
+}
+
 @media (max-width: 720px) {
   .payment-summary-header,
   .payment-preview-grid {

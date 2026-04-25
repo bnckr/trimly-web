@@ -2,11 +2,12 @@ import './dashboard/dashboard.css'
 import './agenda/agenda.css'
 import './clientes/clientes.css'
 import './servicos/servicos.css'
+import { ToastProvider } from "@/components/ui/toast-provider";
 
 export default function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  return children
+  return <ToastProvider>{children}</ToastProvider>;
 }

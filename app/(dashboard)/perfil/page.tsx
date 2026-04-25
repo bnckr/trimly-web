@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { getMyProfile, updateMyProfile, uploadAvatar } from "@/actions/profile";
 import "./perfil.css";
+import { Toast } from "@/components/ui/toast";
 
 export default function PerfilPage() {
   const [profile, setProfile] = useState<any>(null);
@@ -21,6 +22,11 @@ export default function PerfilPage() {
     load();
   }, []);
 
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+
   async function handleSave() {
     try {
       setSaving(true);
@@ -34,9 +40,15 @@ export default function PerfilPage() {
         observacoes: profile.observacoes,
       });
 
-      alert("Perfil atualizado com sucesso");
+      setToast({
+        message: "Perfil atualizado com sucesso",
+        type: "success",
+      });
     } catch (error) {
-      alert("Erro ao salvar");
+      setToast({
+        message: "Erro ao salvar perfil",
+        type: "error",
+      });
     } finally {
       setSaving(false);
     }
@@ -154,6 +166,13 @@ export default function PerfilPage() {
               disabled={saving}
             >
               {saving ? "Salvando..." : "Salvar alterações"}
+              {toast && (
+                <Toast
+                  message={toast.message}
+                  type={toast.type}
+                  onClose={() => setToast(null)}
+                />
+              )}
             </button>
           </div>{" "}
         </div>

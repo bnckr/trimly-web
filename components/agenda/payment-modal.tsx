@@ -1,47 +1,50 @@
-'use client'
+"use client";
 
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   calculatePaymentValues,
   deleteAppointmentPayment,
   getDefaultPaymentFee,
   upsertAppointmentPayment,
-} from '@/actions/payments'
-import type { AppointmentPayment, PaymentMethod } from '@/types/payment'
+} from "@/actions/payments";
+import type { AppointmentPayment, PaymentMethod } from "@/types/payment";
+import { useToast } from "@/components/ui/toast-provider";
+
+const { showToast } = useToast();
 
 type PaymentModalEvent = {
-  id: string
-  cliente_id?: string | null
-  profissional_id?: string | null
-  cliente_nome: string | null
-  servico_nome: string | null
-  valor_final: number | null
-}
+  id: string;
+  cliente_id?: string | null;
+  profissional_id?: string | null;
+  cliente_nome: string | null;
+  servico_nome: string | null;
+  valor_final: number | null;
+};
 
 type PaymentModalProps = {
-  open: boolean
-  event: PaymentModalEvent | null
-  existingPayment: AppointmentPayment | null
-  onClose: () => void
-  onSaved: () => void | Promise<void>
-}
+  open: boolean;
+  event: PaymentModalEvent | null;
+  existingPayment: AppointmentPayment | null;
+  onClose: () => void;
+  onSaved: () => void | Promise<void>;
+};
 
 const PAYMENT_OPTIONS: { value: PaymentMethod; label: string }[] = [
-  { value: 'dinheiro', label: 'Dinheiro' },
-  { value: 'pix', label: 'Pix' },
-  { value: 'debito', label: 'Débito - Mercado Pago 1,99%' },
-  { value: 'credito', label: 'Crédito à vista - Mercado Pago 4,98%' },
-  { value: 'credito_parcelado', label: 'Crédito parcelado' },
-  { value: 'cortesia', label: 'Cortesia' },
-]
+  { value: "dinheiro", label: "Dinheiro" },
+  { value: "pix", label: "Pix" },
+  { value: "debito", label: "Débito - Mercado Pago 1,99%" },
+  { value: "credito", label: "Crédito à vista - Mercado Pago 4,98%" },
+  { value: "credito_parcelado", label: "Crédito parcelado" },
+  { value: "cortesia", label: "Cortesia" },
+];
 
 function formatCurrency(value: number | null | undefined) {
-  if (value === null || value === undefined) return 'R$ 0,00'
+  if (value === null || value === undefined) return "R$ 0,00";
 
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(Number(value))
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(Number(value));
 }
 
 export function PaymentModal({
@@ -51,67 +54,66 @@ export function PaymentModal({
   onClose,
   onSaved,
 }: PaymentModalProps) {
-  const [formaPagamento, setFormaPagamento] =
-    useState<PaymentMethod>('pix')
-  const [taxaPercentual, setTaxaPercentual] = useState('0')
-  const [parcelas, setParcelas] = useState('2')
-  const [observacoes, setObservacoes] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [erro, setErro] = useState('')
+  const [formaPagamento, setFormaPagamento] = useState<PaymentMethod>("pix");
+  const [taxaPercentual, setTaxaPercentual] = useState("0");
+  const [parcelas, setParcelas] = useState("2");
+  const [observacoes, setObservacoes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [erro, setErro] = useState("");
 
-  const valorBruto = Number(event?.valor_final ?? 0)
+  const valorBruto = Number(event?.valor_final ?? 0);
 
   const preview = useMemo(() => {
     return calculatePaymentValues({
       valor_bruto: valorBruto,
       taxa_percentual: Number(taxaPercentual || 0),
-    })
-  }, [valorBruto, taxaPercentual])
+    });
+  }, [valorBruto, taxaPercentual]);
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
 
     if (existingPayment) {
-      setFormaPagamento(existingPayment.forma_pagamento)
-      setTaxaPercentual(String(existingPayment.taxa_percentual ?? 0))
-      setParcelas(String(existingPayment.parcelas ?? 2))
-      setObservacoes(existingPayment.observacoes ?? '')
-      setErro('')
-      return
+      setFormaPagamento(existingPayment.forma_pagamento);
+      setTaxaPercentual(String(existingPayment.taxa_percentual ?? 0));
+      setParcelas(String(existingPayment.parcelas ?? 2));
+      setObservacoes(existingPayment.observacoes ?? "");
+      setErro("");
+      return;
     }
 
-    setFormaPagamento('pix')
-    setTaxaPercentual(String(getDefaultPaymentFee('pix')))
-    setParcelas('2')
-    setObservacoes('')
-    setErro('')
-  }, [open, existingPayment])
+    setFormaPagamento("pix");
+    setTaxaPercentual(String(getDefaultPaymentFee("pix")));
+    setParcelas("2");
+    setObservacoes("");
+    setErro("");
+  }, [open, existingPayment]);
 
-  if (!open || !event) return null
+  if (!open || !event) return null;
 
-  const currentEvent = event
+  const currentEvent = event;
 
   function handlePaymentMethodChange(method: PaymentMethod) {
-    setFormaPagamento(method)
-    setTaxaPercentual(String(getDefaultPaymentFee(method)))
+    setFormaPagamento(method);
+    setTaxaPercentual(String(getDefaultPaymentFee(method)));
   }
 
   async function handleSubmit(eventForm: FormEvent<HTMLFormElement>) {
-    eventForm.preventDefault()
-    setErro('')
+    eventForm.preventDefault();
+    setErro("");
 
     if (!currentEvent.cliente_id) {
-      setErro('Cliente não encontrado para este agendamento.')
-      return
+      setErro("Cliente não encontrado para este agendamento.");
+      return;
     }
 
     if (!currentEvent.profissional_id) {
-      setErro('Profissional não encontrado para este agendamento.')
-      return
+      setErro("Profissional não encontrado para este agendamento.");
+      return;
     }
 
     try {
-      setSaving(true)
+      setSaving(true);
 
       await upsertAppointmentPayment({
         appointment_id: currentEvent.id,
@@ -121,43 +123,40 @@ export function PaymentModal({
         valor_bruto: valorBruto,
         taxa_percentual: Number(taxaPercentual || 0),
         parcelas:
-          formaPagamento === 'credito_parcelado'
-            ? Number(parcelas || 2)
-            : null,
+          formaPagamento === "credito_parcelado" ? Number(parcelas || 2) : null,
         observacoes: observacoes || null,
-      })
-
-      await onSaved()
-      onClose()
+      });
+      showToast("Pagamento registrado com sucesso", "success");
+      await onSaved();
+      onClose();
     } catch (error) {
-      setErro(
-        error instanceof Error
-          ? error.message
-          : 'Erro ao salvar pagamento.',
-      )
+      showToast(
+        error instanceof Error ? error.message : "Erro ao salvar pagamento",
+        "error",
+      );
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
   async function handleDeletePayment() {
-    if (!confirm('Deseja remover o pagamento deste agendamento?')) {
-      return
+    if (!confirm("Deseja remover o pagamento deste agendamento?")) {
+      return;
     }
 
     try {
-      setSaving(true)
-      await deleteAppointmentPayment(currentEvent.id)
-      await onSaved()
-      onClose()
+      setSaving(true);
+      await deleteAppointmentPayment(currentEvent.id);
+      showToast("Pagamento removido com sucesso", "success");
+      await onSaved();
+      onClose();
     } catch (error) {
-      setErro(
-        error instanceof Error
-          ? error.message
-          : 'Erro ao remover pagamento.',
-      )
+      showToast(
+        error instanceof Error ? error.message : "Erro ao remover pagamento",
+        "error",
+      );
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -168,17 +167,11 @@ export function PaymentModal({
           <div>
             <p>Pagamento</p>
             <h2>
-              {existingPayment
-                ? 'Editar pagamento'
-                : 'Registrar pagamento'}
+              {existingPayment ? "Editar pagamento" : "Registrar pagamento"}
             </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="modal-close"
-          >
+          <button type="button" onClick={onClose} className="modal-close">
             ×
           </button>
         </div>
@@ -201,9 +194,7 @@ export function PaymentModal({
             <select
               value={formaPagamento}
               onChange={(e) =>
-                handlePaymentMethodChange(
-                  e.target.value as PaymentMethod,
-                )
+                handlePaymentMethodChange(e.target.value as PaymentMethod)
               }
             >
               {PAYMENT_OPTIONS.map((option) => (
@@ -214,7 +205,7 @@ export function PaymentModal({
             </select>
           </label>
 
-          {formaPagamento === 'credito_parcelado' ? (
+          {formaPagamento === "credito_parcelado" ? (
             <label>
               Parcelas
               <input
@@ -295,11 +286,11 @@ export function PaymentModal({
               className="appointment-save-button"
               disabled={saving}
             >
-              {saving ? 'Salvando...' : 'Salvar pagamento'}
+              {saving ? "Salvando..." : "Salvar pagamento"}
             </button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }
