@@ -6,7 +6,6 @@ export const metadata = {
   title: "Trimly",
   description: "Sistema de agendamento para salões e profissionais da beleza",
   manifest: "/manifest.json",
-  themeColor: "#71bbef",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
