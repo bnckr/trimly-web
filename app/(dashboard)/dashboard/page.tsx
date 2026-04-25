@@ -1,12 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+
+const APPOINTMENT_ACTIVE_STATUSES = [
+  "agendado",
+  "confirmado",
+  "em_atendimento",
+  "finalizado",
+];
+
+const APPOINTMENT_UPCOMING_EXCLUDED_STATUSES = [
+  "finalizado",
+  "cancelado",
+  "faltou",
+];
+
+type PeriodFilter = "dia" | "semana" | "mes" | "ano";
 
 type Profile = {
   nome: string;
@@ -15,10 +30,10 @@ type Profile = {
 };
 
 type DashboardStats = {
-  atendimentosHoje: number;
+  atendimentosPeriodo: number;
   faturamentoPrevisto: number;
-  faturamentoDia: number;
-  clientesMes: number;
+  faturamentoLiquidoDia: number;
+  clientesPeriodo: number;
   horariosBloqueados: number;
 };
 
@@ -54,6 +69,17 @@ function getToday() {
   return new Date().toLocaleDateString("en-CA");
 }
 
+function getMonthFromDate(dateString: string) {
+  return Number(dateString.split("-")[1]);
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
+
 function formatDateBR(dateString: string) {
   const [year, month, day] = dateString.split("-").map(Number);
   const date = new Date(year, month - 1, day);
@@ -65,10 +91,24 @@ function formatDateBR(dateString: string) {
   });
 }
 
-function getDateRange(
-  dateString: string,
-  type: "dia" | "semana" | "mes" | "ano",
-) {
+function formatDateShortBR(dateString: string) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  return date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
+function formatDateFullBR(dateString: string) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  return date.toLocaleDateString("pt-BR");
+}
+
+function getDateRange(dateString: string, type: PeriodFilter) {
   const [year, month, day] = dateString.split("-").map(Number);
   const date = new Date(year, month - 1, day);
 
@@ -102,37 +142,11 @@ function getDateRange(
   };
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
-function formatDateShortBR(dateString: string) {
-  const [year, month, day] = dateString.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-
-  return date.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-  });
-}
-
-function formatDateFullBR(dateString: string) {
-  const [year, month, day] = dateString.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-
-  return date.toLocaleDateString("pt-BR");
-}
-
 function groupAgendaByDate(items: AgendaItem[]) {
   return items.reduce<Record<string, AgendaItem[]>>((acc, item) => {
     const date = item.data_referencia;
 
-    if (!acc[date]) {
-      acc[date] = [];
-    }
+    if (!acc[date]) acc[date] = [];
 
     acc[date].push(item);
     return acc;
@@ -144,21 +158,24 @@ export default function DashboardPage() {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
-    atendimentosHoje: 0,
+    atendimentosPeriodo: 0,
     faturamentoPrevisto: 0,
-    faturamentoDia: 0,
-    clientesMes: 0,
+    faturamentoLiquidoDia: 0,
+    clientesPeriodo: 0,
     horariosBloqueados: 0,
   });
-  const [agendaHoje, setAgendaHoje] = useState<AgendaItem[]>([]);
+  const [agendaItems, setAgendaItems] = useState<AgendaItem[]>([]);
   const [aniversariantes, setAniversariantes] = useState<BirthdayClient[]>([]);
-  const [loading, setLoading] = useState(true);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [selectedProfessionalId, setSelectedProfessionalId] = useState("");
   const [selectedDate, setSelectedDate] = useState(getToday());
-  const [filterType, setFilterType] = useState<
-    "dia" | "semana" | "mes" | "ano"
-  >("dia");
+  const [filterType, setFilterType] = useState<PeriodFilter>("dia");
+  const [loading, setLoading] = useState(true);
+
+  const range = useMemo(
+    () => getDateRange(selectedDate, filterType),
+    [selectedDate, filterType],
+  );
 
   useEffect(() => {
     async function loadDashboard() {
@@ -174,8 +191,6 @@ export default function DashboardPage() {
       }
 
       const professionalId = selectedProfessionalId || session.user.id;
-      const range = getDateRange(selectedDate, filterType);
-      const selectedDay = selectedDate;
 
       const { data: profileData } = await supabase
         .from("profiles")
@@ -201,57 +216,87 @@ export default function DashboardPage() {
         setSelectedProfessionalId(session.user.id);
       }
 
-      const { data: appointmentsPeriod } = await supabase
-        .from("appointments")
-        .select("id, status, valor_final")
-        .eq("profissional_id", professionalId)
-        .gte("data_agendamento", range.start)
-        .lte("data_agendamento", range.end);
+      const [
+        appointmentsPeriodResult,
+        finishedDayAppointmentsResult,
+        agendaResult,
+        clientsPeriodResult,
+        blocksPeriodResult,
+        allClientsResult,
+      ] = await Promise.all([
+        supabase
+          .from("appointments")
+          .select("id, status, valor_final")
+          .eq("profissional_id", professionalId)
+          .gte("data_agendamento", range.start)
+          .lte("data_agendamento", range.end),
+        supabase
+          .from("appointments")
+          .select("id")
+          .eq("profissional_id", professionalId)
+          .eq("data_agendamento", selectedDate)
+          .eq("status", "finalizado"),
+        supabase
+          .from("v_agenda_unificada")
+          .select("*")
+          .eq("profissional_id", professionalId)
+          .gte("data_referencia", range.start)
+          .lte("data_referencia", range.end)
+          .order("data_referencia", { ascending: true })
+          .order("hora_inicio", { ascending: true }),
+        supabase
+          .from("clients")
+          .select("id, created_at")
+          .gte("created_at", `${range.start}T00:00:00`)
+          .lte("created_at", `${range.end}T23:59:59`),
+        supabase
+          .from("schedule_blocks")
+          .select("id")
+          .eq("profissional_id", professionalId)
+          .gte("data_bloqueio", range.start)
+          .lte("data_bloqueio", range.end),
+        supabase
+          .from("clients")
+          .select("id, nome, telefone, data_nascimento")
+          .eq("ativo", true)
+          .not("data_nascimento", "is", null),
+      ]);
 
-      const { data: todayPayments } = await supabase
-        .from("appointment_payments")
-        .select("valor_liquido_colaborador, pago_em")
-        .eq("profissional_id", professionalId)
-        .gte("pago_em", `${selectedDay}T00:00:00`)
-        .lte("pago_em", `${selectedDay}T23:59:59`);
+      const finishedDayAppointmentIds = (
+        finishedDayAppointmentsResult.data ?? []
+      ).map((appointment) => appointment.id);
 
-      const { data: agendaData } = await supabase
-        .from("v_agenda_unificada")
-        .select("*")
-        .eq("profissional_id", professionalId)
-        .gte("data_referencia", range.start)
-        .lte("data_referencia", range.end)
-        .order("data_referencia", { ascending: true })
-        .order("hora_inicio", { ascending: true });
+      let faturamentoLiquidoDia = 0;
 
-      const { data: clientsMonth } = await supabase
-        .from("clients")
-        .select("id, created_at")
-        .gte("created_at", `${range.start}T00:00:00`)
-        .lte("created_at", `${range.end}T23:59:59`);
+      if (finishedDayAppointmentIds.length > 0) {
+        const { data: selectedPayments } = await supabase
+          .from("appointment_payments")
+          .select("valor_liquido_colaborador")
+          .in("appointment_id", finishedDayAppointmentIds);
 
-      const { data: blockedToday } = await supabase
-        .from("schedule_blocks")
-        .select("id")
-        .eq("profissional_id", professionalId)
-        .gte("data_bloqueio", range.start)
-        .lte("data_bloqueio", range.end);
+        faturamentoLiquidoDia = (selectedPayments ?? []).reduce(
+          (total, item) => total + Number(item.valor_liquido_colaborador ?? 0),
+          0,
+        );
+      }
 
-      const currentMonth = new Date().getMonth() + 1;
+      const appointmentsPeriod = appointmentsPeriodResult.data ?? [];
+      const validAppointments = appointmentsPeriod.filter((item) =>
+        APPOINTMENT_ACTIVE_STATUSES.includes(item.status),
+      );
 
-      const { data: allClients } = await supabase
-        .from("clients")
-        .select("id, nome, telefone, data_nascimento")
-        .eq("ativo", true)
-        .not("data_nascimento", "is", null);
+      const faturamentoPrevisto = validAppointments.reduce(
+        (total, item) => total + Number(item.valor_final ?? 0),
+        0,
+      );
 
-      const birthdayClients = (allClients ?? []).filter((client) => {
+      const currentMonth = getMonthFromDate(selectedDate);
+      const birthdayClients = (allClientsResult.data ?? []).filter((client) => {
         const month = Number(client.data_nascimento?.split("-")[1]);
         return month === currentMonth;
       });
 
       const birthdayClientIds = birthdayClients.map((client) => client.id);
-
       const { data: usedBirthdayCoupons } =
         birthdayClientIds.length > 0
           ? await supabase
@@ -275,37 +320,21 @@ export default function DashboardPage() {
         }))
         .sort((a, b) => a.aniversario_dia - b.aniversario_dia);
 
-      const validAppointments = (appointmentsPeriod ?? []).filter((item) =>
-        ["agendado", "confirmado", "em_atendimento", "finalizado"].includes(
-          item.status,
-        ),
-      );
-
-      const faturamentoPrevisto = validAppointments.reduce(
-        (total, item) => total + Number(item.valor_final ?? 0),
-        0,
-      );
-
-      const faturamentoDia = (todayPayments ?? []).reduce(
-        (total, item) => total + Number(item.valor_liquido_colaborador ?? 0),
-        0,
-      );
-
       setStats({
-        atendimentosHoje: validAppointments.length,
+        atendimentosPeriodo: validAppointments.length,
         faturamentoPrevisto,
-        faturamentoDia,
-        clientesMes: clientsMonth?.length ?? 0,
-        horariosBloqueados: blockedToday?.length ?? 0,
+        faturamentoLiquidoDia,
+        clientesPeriodo: clientsPeriodResult.data?.length ?? 0,
+        horariosBloqueados: blocksPeriodResult.data?.length ?? 0,
       });
 
-      setAgendaHoje((agendaData ?? []) as AgendaItem[]);
+      setAgendaItems((agendaResult.data ?? []) as AgendaItem[]);
       setAniversariantes(birthdaysWithCoupon);
       setLoading(false);
     }
 
     loadDashboard();
-  }, [router, selectedProfessionalId, selectedDate, filterType]);
+  }, [router, selectedProfessionalId, selectedDate, filterType, range.start, range.end]);
 
   function getPeriodLabel() {
     if (filterType === "dia") return "do dia";
@@ -322,15 +351,13 @@ export default function DashboardPage() {
     );
   }
 
-  const upcomingAppointments = agendaHoje.filter(
+  const upcomingAppointments = agendaItems.filter(
     (item) =>
       item.tipo_evento === "agendamento" &&
-      !["finalizado", "cancelado", "faltou"].includes(item.status),
+      !APPOINTMENT_UPCOMING_EXCLUDED_STATUSES.includes(item.status),
   );
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+  if (loading) return <LoadingSpinner />;
 
   return (
     <main className="dashboard-shell">
@@ -339,8 +366,8 @@ export default function DashboardPage() {
       <section className="dashboard-main">
         <Header profile={profile} />
 
-        <div className="dashboard-filter-card">
-          <div>
+        <section className="dashboard-filter-card">
+          <div className="dashboard-filter-copy">
             <p className="dashboard-filter-label">Visão geral</p>
             <h2>Resumo {getPeriodLabel()}</h2>
             <span className="dashboard-filter-context">
@@ -351,7 +378,8 @@ export default function DashboardPage() {
           <div className="dashboard-filter-actions">
             <select
               value={selectedProfessionalId}
-              onChange={(e) => setSelectedProfessionalId(e.target.value)}
+              onChange={(event) => setSelectedProfessionalId(event.target.value)}
+              aria-label="Selecionar profissional"
             >
               {professionals.map((professional) => (
                 <option key={professional.id} value={professional.id}>
@@ -362,11 +390,8 @@ export default function DashboardPage() {
 
             <select
               value={filterType}
-              onChange={(e) =>
-                setFilterType(
-                  e.target.value as "dia" | "semana" | "mes" | "ano",
-                )
-              }
+              onChange={(event) => setFilterType(event.target.value as PeriodFilter)}
+              aria-label="Selecionar período"
             >
               <option value="dia">Dia</option>
               <option value="semana">Semana</option>
@@ -377,19 +402,20 @@ export default function DashboardPage() {
             <input
               type="date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={(event) => setSelectedDate(event.target.value)}
+              aria-label="Selecionar data"
             />
 
             <button type="button" onClick={() => router.push("/agenda")}>
               Ver agenda
             </button>
           </div>
-        </div>
+        </section>
 
-        <div className="dashboard-grid">
+        <section className="dashboard-grid">
           <DashboardCard
             title={`Atendimentos ${getPeriodLabel()}`}
-            value={String(stats.atendimentosHoje)}
+            value={String(stats.atendimentosPeriodo)}
             description="Agendados, confirmados, em atendimento ou finalizados"
           />
 
@@ -401,13 +427,13 @@ export default function DashboardPage() {
 
           <DashboardCard
             title="Faturamento líquido do dia"
-            value={formatCurrency(stats.faturamentoDia)}
+            value={formatCurrency(stats.faturamentoLiquidoDia)}
             description="Valor recebido após descontos e taxas"
           />
 
           <DashboardCard
             title={`Clientes ${getPeriodLabel()}`}
-            value={String(stats.clientesMes)}
+            value={String(stats.clientesPeriodo)}
             description="Novos clientes cadastrados"
           />
 
@@ -416,7 +442,7 @@ export default function DashboardPage() {
             value={String(stats.horariosBloqueados)}
             description={`Bloqueios cadastrados ${getPeriodLabel()}`}
           />
-        </div>
+        </section>
 
         <div className="dashboard-content">
           <section className="panel large-panel">
@@ -432,15 +458,12 @@ export default function DashboardPage() {
                           : filterType === "mes"
                             ? "Período do mês"
                             : "Período do ano"
-                      } de ${formatDateFullBR(
-                        getDateRange(selectedDate, filterType).start,
-                      )} até ${formatDateFullBR(
-                        getDateRange(selectedDate, filterType).end,
-                      )}.`}
+                      } de ${formatDateFullBR(range.start)} até ${formatDateFullBR(range.end)}.`}
                 </p>
               </div>
 
               <button
+                type="button"
                 className="primary-button"
                 onClick={() => router.push("/agenda")}
               >
@@ -448,36 +471,36 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {agendaHoje.length === 0 ? (
+            {agendaItems.length === 0 ? (
               <div className="empty-state">
                 <div>
-                  <h3>Nenhum agendamento para hoje</h3>
-                  <p>
-                    Quando você criar um agendamento, ele aparecerá nesta área.
-                  </p>
+                  <h3>Nenhum agendamento encontrado</h3>
+                  <p>Quando você criar um agendamento, ele aparecerá nesta área.</p>
                 </div>
               </div>
             ) : (
               <div className="dashboard-agenda-list">
                 {filterType === "dia"
-                  ? agendaHoje.slice(0, 5).map((item) => (
+                  ? agendaItems.slice(0, 5).map((item) => (
                       <div className="dashboard-agenda-item" key={item.id}>
                         <div>
                           <strong>
-                            {item.hora_inicio.slice(0, 5)} -{" "}
+                            {item.hora_inicio.slice(0, 5)} - {" "}
                             {item.hora_fim.slice(0, 5)}
                           </strong>
                           <p>
                             {item.tipo_evento === "bloqueio"
-                              ? (item.motivo_bloqueio ?? "Horário bloqueado")
+                              ? item.motivo_bloqueio ?? "Horário bloqueado"
                               : `${item.cliente_nome} · ${item.servico_nome}`}
                           </p>
                         </div>
 
-                        <span>{item.status}</span>
+                        <span>
+                          {item.tipo_evento === "bloqueio" ? "bloqueio" : item.status}
+                        </span>
                       </div>
                     ))
-                  : Object.entries(groupAgendaByDate(agendaHoje)).map(
+                  : Object.entries(groupAgendaByDate(agendaItems)).map(
                       ([date, items]) => (
                         <div className="dashboard-agenda-day-group" key={date}>
                           <h3>Dia {formatDateShortBR(date)}</h3>
@@ -490,22 +513,19 @@ export default function DashboardPage() {
                               >
                                 <div>
                                   <strong>
-                                    {item.hora_inicio.slice(0, 5)} -{" "}
+                                    {item.hora_inicio.slice(0, 5)} - {" "}
                                     {item.hora_fim.slice(0, 5)}
                                   </strong>
 
                                   <p>
                                     {item.tipo_evento === "bloqueio"
-                                      ? (item.motivo_bloqueio ??
-                                        "Horário bloqueado")
+                                      ? item.motivo_bloqueio ?? "Horário bloqueado"
                                       : `${item.cliente_nome} · ${item.servico_nome}`}
                                   </p>
                                 </div>
 
                                 {item.valor_final !== null ? (
-                                  <span>
-                                    {formatCurrency(Number(item.valor_final))}
-                                  </span>
+                                  <span>{formatCurrency(Number(item.valor_final))}</span>
                                 ) : (
                                   <span>{item.status}</span>
                                 )}
@@ -541,9 +561,7 @@ export default function DashboardPage() {
               <h2>Aniversariantes</h2>
 
               {aniversariantes.length === 0 ? (
-                <div className="mini-empty">
-                  Nenhum aniversariante este mês.
-                </div>
+                <div className="mini-empty">Nenhum aniversariante este mês.</div>
               ) : (
                 <div className="mini-list">
                   {aniversariantes.map((client) => (
@@ -551,7 +569,7 @@ export default function DashboardPage() {
                       <strong>{client.nome}</strong>
 
                       <span>
-                        Dia {String(client.aniversario_dia).padStart(2, "0")} ·{" "}
+                        Dia {String(client.aniversario_dia).padStart(2, "0")} · {" "}
                         {client.telefone}
                       </span>
 
@@ -562,9 +580,7 @@ export default function DashboardPage() {
                             : "birthday-coupon-available"
                         }
                       >
-                        {client.cupom_usado
-                          ? "Cupom usado"
-                          : "Cupom disponível"}
+                        {client.cupom_usado ? "Cupom usado" : "Cupom disponível"}
                       </small>
                     </div>
                   ))}

@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { ClientModal } from '@/components/clientes/client-modal'
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { useToast } from '@/components/ui/toast-provider'
 
 type Profile = {
   nome: string
@@ -27,8 +28,41 @@ type Client = {
   ativo: boolean
 }
 
+function formatBirthDate(dateString: string | null) {
+  if (!dateString) return '-'
+
+  const [year, month, day] = dateString.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+
+  return date.toLocaleDateString('pt-BR')
+}
+
+function getBirthdayShort(dateString: string | null) {
+  if (!dateString) return null
+
+  const [, month, day] = dateString.split('-')
+  return `${day}/${month}`
+}
+
+function normalizePhone(phone: string) {
+  return phone.replace(/\D/g, '')
+}
+
+function buildWhatsAppLink(phone: string) {
+  const normalized = normalizePhone(phone)
+
+  if (!normalized) return '#'
+
+  const phoneWithCountry = normalized.startsWith('55')
+    ? normalized
+    : `55${normalized}`
+
+  return `https://wa.me/${phoneWithCountry}`
+}
+
 export default function ClientesPage() {
   const router = useRouter()
+  const { showToast } = useToast()
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [clients, setClients] = useState<Client[]>([])
@@ -45,6 +79,7 @@ export default function ClientesPage() {
 
     if (error) {
       console.error(error)
+      showToast('Erro ao carregar clientes', 'error')
       return
     }
 
@@ -83,20 +118,24 @@ export default function ClientesPage() {
 
   const filteredClients = useMemo(() => {
     const term = search.toLowerCase().trim()
-    const phoneTerm = search.replace(/\D/g, '')
+    const phoneTerm = normalizePhone(search)
 
     if (!term) return clients
 
     return clients.filter((client) => {
-      const phone = client.telefone_normalizado ?? client.telefone.replace(/\D/g, '')
+      const phone = client.telefone_normalizado ?? normalizePhone(client.telefone)
 
       return (
         client.nome.toLowerCase().includes(term) ||
         client.telefone.toLowerCase().includes(term) ||
-        phone.includes(phoneTerm)
+        phone.includes(phoneTerm) ||
+        client.email?.toLowerCase().includes(term)
       )
     })
   }, [clients, search])
+
+  const activeClients = clients.filter((client) => client.ativo).length
+  const inactiveClients = clients.length - activeClients
 
   async function deactivateClient(id: string) {
     const confirmDelete = confirm('Deseja inativar este cliente?')
@@ -109,15 +148,16 @@ export default function ClientesPage() {
       .eq('id', id)
 
     if (error) {
-      alert(error.message)
+      showToast(error.message, 'error')
       return
     }
 
+    showToast('Cliente inativado com sucesso', 'success')
     await loadClients()
   }
 
   if (loading) {
-    return <LoadingSpinner />;
+    return <LoadingSpinner />
   }
 
   return (
@@ -127,14 +167,18 @@ export default function ClientesPage() {
       <section className="clientes-main">
         <Header profile={profile} />
 
-        <div className="clientes-toolbar">
+        <div className="clientes-toolbar clientes-toolbar-compact">
           <div>
             <p className="clientes-eyebrow">Base global</p>
             <h2>Clientes</h2>
+            <span>
+              {activeClients} ativos · {inactiveClients} inativos
+            </span>
           </div>
 
           <button
             className="primary-button"
+            type="button"
             onClick={() => {
               setSelectedClient(null)
               setModalOpen(true)
@@ -144,18 +188,21 @@ export default function ClientesPage() {
           </button>
         </div>
 
-        <section className="clientes-panel">
-          <div className="clientes-panel-header">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nome ou telefone..."
-            />
+        <section className="clientes-panel clientes-panel-compact">
+          <div className="clientes-panel-header clientes-search-card">
+            <div className="clientes-search-wrapper">
+              <span>Buscar</span>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Nome, telefone ou e-mail"
+              />
+            </div>
 
-            <span>
+            <strong>
               {filteredClients.length}{' '}
               {filteredClients.length === 1 ? 'cliente' : 'clientes'}
-            </span>
+            </strong>
           </div>
 
           {filteredClients.length === 0 ? (
@@ -164,8 +211,8 @@ export default function ClientesPage() {
               <p>Cadastre seu primeiro cliente para começar os agendamentos.</p>
             </div>
           ) : (
-            <div className="clientes-table">
-              <div className="clientes-table-head">
+            <div className="clientes-list">
+              <div className="clientes-table-head clientes-desktop-only">
                 <span>Nome</span>
                 <span>Telefone</span>
                 <span>Nascimento</span>
@@ -173,40 +220,65 @@ export default function ClientesPage() {
                 <span>Ações</span>
               </div>
 
-              {filteredClients.map((client) => (
-                <div className="clientes-table-row" key={client.id}>
-                  <strong>{client.nome}</strong>
-                  <span>{client.telefone}</span>
-                  <span>
-                    {client.data_nascimento
-                      ? new Date(
-                          Number(client.data_nascimento.split('-')[0]),
-                          Number(client.data_nascimento.split('-')[1]) - 1,
-                          Number(client.data_nascimento.split('-')[2])
-                        ).toLocaleDateString('pt-BR')
-                      : '-'}
-                  </span>
-                  <span className={client.ativo ? 'status-active' : 'status-inactive'}>
-                    {client.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
-                  <div className="clientes-actions">
-                    <button
-                      onClick={() => {
-                        setSelectedClient(client)
-                        setModalOpen(true)
-                      }}
-                    >
-                      Editar
-                    </button>
+              {filteredClients.map((client) => {
+                const birthday = getBirthdayShort(client.data_nascimento)
 
-                    {client.ativo ? (
-                      <button onClick={() => deactivateClient(client.id)}>
-                        Inativar
+                return (
+                  <article className="cliente-card" key={client.id}>
+                    <div className="cliente-main-info">
+                      <div>
+                        <strong>{client.nome}</strong>
+                        <span>{client.telefone}</span>
+                      </div>
+
+                      <span
+                        className={
+                          client.ativo ? 'status-active' : 'status-inactive'
+                        }
+                      >
+                        {client.ativo ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </div>
+
+                    <div className="cliente-meta-grid">
+                      <div>
+                        <span>Nascimento</span>
+                        <strong>{formatBirthDate(client.data_nascimento)}</strong>
+                      </div>
+                    </div>
+
+                    <div className="clientes-actions">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedClient(client)
+                          setModalOpen(true)
+                        }}
+                      >
+                        Editar
                       </button>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
+
+                      <a
+                        href={buildWhatsAppLink(client.telefone)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        WhatsApp
+                      </a>
+
+                      {client.ativo ? (
+                        <button
+                          type="button"
+                          className="danger-action"
+                          onClick={() => deactivateClient(client.id)}
+                        >
+                          Inativar
+                        </button>
+                      ) : null}
+                    </div>
+                  </article>
+                )
+              })}
             </div>
           )}
         </section>
@@ -216,7 +288,10 @@ export default function ClientesPage() {
         open={modalOpen}
         client={selectedClient}
         onClose={() => setModalOpen(false)}
-        onSaved={loadClients}
+        onSaved={async () => {
+          await loadClients()
+          showToast('Cliente salvo com sucesso', 'success')
+        }}
       />
     </main>
   )

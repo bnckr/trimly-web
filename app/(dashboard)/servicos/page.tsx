@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { ServiceModal } from '@/components/servicos/service-modal'
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { useToast } from '@/components/ui/toast-provider'
 
 type Profile = {
   nome: string
@@ -31,6 +32,7 @@ function formatCurrency(value: number) {
 
 export default function ServicosPage() {
   const router = useRouter()
+  const { showToast } = useToast()
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [services, setServices] = useState<Service[]>([])
@@ -47,6 +49,7 @@ export default function ServicosPage() {
 
     if (error) {
       console.error(error)
+      showToast('Erro ao carregar serviços', 'error')
       return
     }
 
@@ -85,12 +88,15 @@ export default function ServicosPage() {
 
   const filteredServices = useMemo(() => {
     const term = search.toLowerCase().trim()
+
     if (!term) return services
 
     return services.filter((service) =>
-      service.nome.toLowerCase().includes(term)
+      service.nome.toLowerCase().includes(term),
     )
   }, [services, search])
+
+  const activeServices = services.filter((service) => service.ativo).length
 
   async function deactivateService(id: string) {
     const confirmDelete = confirm('Deseja inativar este serviço?')
@@ -103,15 +109,26 @@ export default function ServicosPage() {
       .eq('id', id)
 
     if (error) {
-      alert(error.message)
+      showToast(error.message, 'error')
       return
     }
 
+    showToast('Serviço inativado com sucesso', 'success')
     await loadServices()
   }
 
+  function openCreateModal() {
+    setSelectedService(null)
+    setModalOpen(true)
+  }
+
+  function openEditModal(service: Service) {
+    setSelectedService(service)
+    setModalOpen(true)
+  }
+
   if (loading) {
-    return <LoadingSpinner />;
+    return <LoadingSpinner />
   }
 
   return (
@@ -125,26 +142,35 @@ export default function ServicosPage() {
           <div>
             <p className="servicos-eyebrow">Catálogo</p>
             <h2>Serviços</h2>
+            <span>
+              {activeServices} ativos · {services.length} cadastrados
+            </span>
           </div>
 
-          <button
-            className="primary-button"
-            onClick={() => {
-              setSelectedService(null)
-              setModalOpen(true)
-            }}
-          >
+          <button className="primary-button" onClick={openCreateModal}>
             Novo serviço
           </button>
         </div>
 
         <section className="servicos-panel">
           <div className="servicos-panel-header">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar serviço..."
-            />
+            <div className="servicos-search">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar serviço..."
+              />
+
+              {search ? (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  aria-label="Limpar busca"
+                >
+                  ×
+                </button>
+              ) : null}
+            </div>
 
             <span>
               {filteredServices.length}{' '}
@@ -168,21 +194,33 @@ export default function ServicosPage() {
               </div>
 
               {filteredServices.map((service) => (
-                <div className="servicos-table-row" key={service.id}>
-                  <strong>{service.nome}</strong>
-                  <span>{formatCurrency(Number(service.valor))}</span>
-                  <span>{service.duracao_minutos} min</span>
-                  <span className={service.ativo ? 'status-active' : 'status-inactive'}>
+                <article className="servicos-table-row" key={service.id}>
+                  <div className="servico-name">
+                    <strong>{service.nome}</strong>
+                    <small>
+                      {formatCurrency(Number(service.valor))} ·{' '}
+                      {service.duracao_minutos} min
+                    </small>
+                  </div>
+
+                  <span className="desktop-only">
+                    {formatCurrency(Number(service.valor))}
+                  </span>
+
+                  <span className="desktop-only">
+                    {service.duracao_minutos} min
+                  </span>
+
+                  <span
+                    className={
+                      service.ativo ? 'status-active' : 'status-inactive'
+                    }
+                  >
                     {service.ativo ? 'Ativo' : 'Inativo'}
                   </span>
 
                   <div className="servicos-actions">
-                    <button
-                      onClick={() => {
-                        setSelectedService(service)
-                        setModalOpen(true)
-                      }}
-                    >
+                    <button onClick={() => openEditModal(service)}>
                       Editar
                     </button>
 
@@ -192,7 +230,7 @@ export default function ServicosPage() {
                       </button>
                     ) : null}
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           )}
@@ -203,7 +241,10 @@ export default function ServicosPage() {
         open={modalOpen}
         service={selectedService}
         onClose={() => setModalOpen(false)}
-        onSaved={loadServices}
+        onSaved={async () => {
+          await loadServices()
+          setModalOpen(false)
+        }}
       />
     </main>
   )

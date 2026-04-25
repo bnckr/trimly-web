@@ -19,10 +19,29 @@ type Profile = {
   avatar_url: string | null;
 };
 
+type ReportSummary = {
+  faturamentoBruto: number;
+  faturamentoLiquido: number;
+  descontos: number;
+  taxas: number;
+  totalAtendimentos: number;
+  totalFinalizados: number;
+  totalCancelados: number;
+  totalFaltas: number;
+  ticketMedio: number;
+};
+
+type RankedItem = {
+  nome?: string;
+  nome_cupom?: string;
+  total: number;
+};
+
 function getMonthStart() {
   const date = new Date();
-  return new Date(date.getFullYear(), date.getMonth(), 1)
-    .toLocaleDateString("en-CA");
+  return new Date(date.getFullYear(), date.getMonth(), 1).toLocaleDateString(
+    "en-CA",
+  );
 }
 
 function getToday() {
@@ -36,12 +55,52 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+function formatDateBR(dateString: string) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  return date.toLocaleDateString("pt-BR");
+}
+
+function RankingList({
+  items,
+  emptyMessage,
+  getLabel,
+  suffix,
+}: {
+  items: RankedItem[];
+  emptyMessage: string;
+  getLabel: (item: RankedItem) => string;
+  suffix: string;
+}) {
+  if (items.length === 0) {
+    return <p className="report-empty">{emptyMessage}</p>;
+  }
+
+  return (
+    <div className="report-list">
+      {items.map((item, index) => (
+        <div key={`${getLabel(item)}-${index}`} className="report-item">
+          <span className="report-rank">#{index + 1}</span>
+
+          <div className="report-item-info">
+            <strong>{getLabel(item)}</strong>
+            <span>
+              {item.total} {suffix}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function RelatoriosPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [report, setReport] = useState<any>(null);
-  const [services, setServices] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
-  const [coupons, setCoupons] = useState<any[]>([]);
+  const [report, setReport] = useState<ReportSummary | null>(null);
+  const [services, setServices] = useState<RankedItem[]>([]);
+  const [clients, setClients] = useState<RankedItem[]>([]);
+  const [coupons, setCoupons] = useState<RankedItem[]>([]);
   const [startDate, setStartDate] = useState(getMonthStart());
   const [endDate, setEndDate] = useState(getToday());
   const [loading, setLoading] = useState(true);
@@ -53,7 +112,10 @@ export default function RelatoriosPage() {
       data: { session },
     } = await supabase.auth.getSession();
 
-    if (!session) return;
+    if (!session) {
+      setLoading(false);
+      return;
+    }
 
     const { data: profileData } = await supabase
       .from("profiles")
@@ -75,15 +137,16 @@ export default function RelatoriosPage() {
         getMostUsedCoupons(),
       ]);
 
-    setReport(reportData);
-    setServices(servicesData);
-    setClients(clientsData);
-    setCoupons(couponsData);
+    setReport(reportData as ReportSummary);
+    setServices((servicesData ?? []) as RankedItem[]);
+    setClients((clientsData ?? []) as RankedItem[]);
+    setCoupons((couponsData ?? []) as RankedItem[]);
     setLoading(false);
   }
 
   useEffect(() => {
     loadReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading || !report) {
@@ -98,41 +161,46 @@ export default function RelatoriosPage() {
         <Header profile={profile} />
 
         <div className="relatorios-toolbar">
-          <div>
+          <div className="relatorios-toolbar-content">
             <p className="relatorios-eyebrow">Análise do negócio</p>
             <h2>Relatórios</h2>
             <span>
-              Período de {startDate.split("-").reverse().join("/")} até{" "}
-              {endDate.split("-").reverse().join("/")}
+              {formatDateBR(startDate)} até {formatDateBR(endDate)}
             </span>
           </div>
 
           <div className="relatorios-filters">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
+            <label>
+              Início
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </label>
 
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
+            <label>
+              Fim
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </label>
 
-            <button type="button" onClick={loadReports}>
-              Filtrar
+            <button type="button" onClick={loadReports} disabled={loading}>
+              {loading ? "Filtrando..." : "Filtrar"}
             </button>
           </div>
         </div>
 
         <div className="relatorios-grid">
-          <div className="report-card">
+          <div className="report-card highlight-card">
             <span>Faturamento bruto</span>
             <strong>{formatCurrency(report.faturamentoBruto)}</strong>
           </div>
 
-          <div className="report-card">
+          <div className="report-card highlight-card">
             <span>Faturamento líquido</span>
             <strong>{formatCurrency(report.faturamentoLiquido)}</strong>
           </div>
@@ -176,47 +244,32 @@ export default function RelatoriosPage() {
         <div className="relatorios-lists">
           <div className="list-card">
             <h3>Serviços mais vendidos</h3>
-
-            {services.length === 0 ? (
-              <p className="report-empty">Nenhum serviço encontrado.</p>
-            ) : (
-              services.map((item, index) => (
-                <div key={index} className="list-item">
-                  <span>{item.nome}</span>
-                  <strong>{item.total}</strong>
-                </div>
-              ))
-            )}
+            <RankingList
+              items={services}
+              emptyMessage="Nenhum serviço encontrado."
+              getLabel={(item) => item.nome ?? "Serviço"}
+              suffix="atendimentos"
+            />
           </div>
 
           <div className="list-card">
             <h3>Clientes frequentes</h3>
-
-            {clients.length === 0 ? (
-              <p className="report-empty">Nenhum cliente encontrado.</p>
-            ) : (
-              clients.map((item, index) => (
-                <div key={index} className="list-item">
-                  <span>{item.nome}</span>
-                  <strong>{item.total}</strong>
-                </div>
-              ))
-            )}
+            <RankingList
+              items={clients}
+              emptyMessage="Nenhum cliente encontrado."
+              getLabel={(item) => item.nome ?? "Cliente"}
+              suffix="visitas"
+            />
           </div>
 
           <div className="list-card">
             <h3>Cupons mais usados</h3>
-
-            {coupons.length === 0 ? (
-              <p className="report-empty">Nenhum cupom usado.</p>
-            ) : (
-              coupons.map((item, index) => (
-                <div key={index} className="list-item">
-                  <span>{item.nome_cupom}</span>
-                  <strong>{item.total}</strong>
-                </div>
-              ))
-            )}
+            <RankingList
+              items={coupons}
+              emptyMessage="Nenhum cupom usado."
+              getLabel={(item) => item.nome_cupom ?? "Cupom"}
+              suffix="usos"
+            />
           </div>
         </div>
       </section>

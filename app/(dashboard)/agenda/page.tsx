@@ -10,6 +10,7 @@ import { BlockTimeModal } from "@/components/agenda/block-time-modal";
 import { EventDetailsModal } from "@/components/agenda/event-details-modal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
+// Types
 type Profile = {
   nome: string;
   email: string | null;
@@ -214,6 +215,18 @@ export default function AgendaPage() {
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
   const [editingAppointment, setEditingAppointment] =
     useState<AgendaEvent | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth < 900);
+    }
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   async function attachPaymentStatus(agendaData: AgendaEvent[]) {
     const appointmentIds = agendaData
@@ -389,7 +402,8 @@ export default function AgendaPage() {
         .eq("ativo", true)
         .order("nome", { ascending: true });
 
-      setProfessionals((professionalsData ?? []) as Professional[]);
+      const professionalsList = (professionalsData ?? []) as Professional[];
+      setProfessionals(professionalsList);
 
       const professionalId = selectedProfessionalId || session.user.id;
 
@@ -398,7 +412,6 @@ export default function AgendaPage() {
       }
 
       await loadAgenda(professionalId, selectedDate, filterType);
-
       setLoading(false);
     }
 
@@ -501,6 +514,279 @@ export default function AgendaPage() {
     setShowEventDetailsModal(true);
   }
 
+  function renderMobileEvent(event: AgendaEvent, showDate = false) {
+    return (
+      <article
+        key={event.id}
+        data-auto={event.auto_bloqueio ? "true" : "false"}
+        onClick={() => handleOpenEvent(event)}
+        className={`mobile-event ${
+          event.tipo_evento === "bloqueio" ? "blocked" : getStatusClass(event.status)
+        }`}
+        style={
+          {
+            "--event-color": event.cor_agenda ?? "#71bbef",
+          } as React.CSSProperties
+        }
+      >
+        <div className="mobile-event-time">
+          <strong>
+            {showDate
+              ? event.data_referencia.split("-").reverse().join("/")
+              : event.hora_inicio.slice(0, 5)}
+          </strong>
+          <span>
+            {showDate
+              ? `${event.hora_inicio.slice(0, 5)} - ${event.hora_fim.slice(0, 5)}`
+              : event.hora_fim.slice(0, 5)}
+          </span>
+        </div>
+
+        <div className="mobile-event-content">
+          <h4>
+            {event.tipo_evento === "bloqueio"
+              ? event.motivo_bloqueio ?? "Horário bloqueado"
+              : event.cliente_nome}
+          </h4>
+
+          <p>
+            {event.tipo_evento === "agendamento"
+              ? event.servico_nome
+              : event.auto_bloqueio
+                ? "Bloqueio automático pelo expediente."
+                : "Indisponível para novos agendamentos."}
+          </p>
+
+          {event.pagamento_registrado ? (
+            <span className="payment-badge">Pago</span>
+          ) : null}
+        </div>
+      </article>
+    );
+  }
+
+  function renderDayCalendar() {
+    return (
+      <div className="calendar-day-scroll">
+        <div className="calendar-single-day-view">
+          <div className="calendar-single-day-header">
+            <div className="time-col" />
+            <div className="day-col-header">{formatDateBR(selectedDate)}</div>
+          </div>
+
+          <div className="calendar-single-day-body">
+            <div className="calendar-time-column">
+              {generateTimeSlots().map((slot) => (
+                <div key={slot} className="calendar-time-slot">
+                  {slot.endsWith(":00") ? slot : ""}
+                </div>
+              ))}
+            </div>
+
+            <div className="calendar-day-column">
+              {generateTimeSlots().map((slot) => (
+                <div
+                  key={slot}
+                  className={`calendar-grid-line ${
+                    slot.endsWith(":00") ? "full-hour" : "half-hour"
+                  }`}
+                />
+              ))}
+
+              {events.map((event) => {
+                const position = getEventPosition(event.hora_inicio, event.hora_fim);
+
+                return (
+                  <article
+                    key={event.id}
+                    data-auto={event.auto_bloqueio ? "true" : "false"}
+                    onClick={() => handleOpenEvent(event)}
+                    className={`calendar-event ${
+                      event.tipo_evento === "bloqueio"
+                        ? "calendar-event-blocked"
+                        : `calendar-event-appointment ${getStatusClass(event.status)}`
+                    }`}
+                    style={
+                      {
+                        top: `${position.top}px`,
+                        height: `${position.height}px`,
+                        "--event-color": event.cor_agenda ?? "#71bbef",
+                      } as React.CSSProperties
+                    }
+                  >
+                    <div className="event-card-header">
+                      <strong>
+                        {event.hora_inicio.slice(0, 5)} - {event.hora_fim.slice(0, 5)}
+                      </strong>
+
+                      {event.pagamento_registrado ? (
+                        <span className="payment-badge">Pago</span>
+                      ) : null}
+                    </div>
+
+                    <span>
+                      {event.tipo_evento === "bloqueio"
+                        ? event.motivo_bloqueio ?? "Horário bloqueado"
+                        : event.cliente_nome}
+                    </span>
+
+                    {event.tipo_evento === "agendamento" ? (
+                      <small>{event.servico_nome}</small>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderWeekCalendar() {
+    return (
+      <div className="calendar-week-scroll">
+        <div className="calendar-week-view">
+          <div className="calendar-week-header">
+            <div className="time-col" />
+
+            {getWeekDays(selectedDate).map((day) => (
+              <div key={day.date} className="day-col-header">
+                {day.label}
+              </div>
+            ))}
+          </div>
+
+          <div className="calendar-week-body">
+            <div className="calendar-time-column">
+              {generateTimeSlots().map((slot) => (
+                <div key={slot} className="calendar-time-slot">
+                  {slot.endsWith(":00") ? slot : ""}
+                </div>
+              ))}
+            </div>
+
+            {getWeekDays(selectedDate).map((day) => {
+              const eventsByDay = groupEventsByDay(events)[day.date] || [];
+
+              return (
+                <div key={day.date} className="calendar-day-column">
+                  {generateTimeSlots().map((slot) => (
+                    <div
+                      key={slot}
+                      className={`calendar-grid-line ${
+                        slot.endsWith(":00") ? "full-hour" : "half-hour"
+                      }`}
+                    />
+                  ))}
+
+                  {eventsByDay.map((event) => {
+                    const pos = getEventPosition(event.hora_inicio, event.hora_fim);
+
+                    return (
+                      <article
+                        key={event.id}
+                        data-auto={event.auto_bloqueio ? "true" : "false"}
+                        onClick={() => handleOpenEvent(event)}
+                        className={`calendar-event ${
+                          event.tipo_evento === "bloqueio"
+                            ? "calendar-event-blocked"
+                            : `calendar-event-appointment ${getStatusClass(event.status)}`
+                        }`}
+                        style={
+                          {
+                            top: `${pos.top}px`,
+                            height: `${pos.height}px`,
+                            "--event-color": event.cor_agenda ?? "#71bbef",
+                          } as React.CSSProperties
+                        }
+                      >
+                        <div className="event-card-header">
+                          <strong>{event.hora_inicio.slice(0, 5)}</strong>
+
+                          {event.pagamento_registrado ? (
+                            <span className="payment-badge">Pago</span>
+                          ) : null}
+                        </div>
+
+                        <span>
+                          {event.tipo_evento === "bloqueio"
+                            ? event.motivo_bloqueio ?? "Bloqueado"
+                            : event.cliente_nome}
+                        </span>
+
+                        {event.tipo_evento === "agendamento" ? (
+                          <small>{event.servico_nome}</small>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderListView() {
+    return (
+      <div className="agenda-list">
+        {events.map((event) => (
+          <article
+            key={event.id}
+            data-auto={event.auto_bloqueio ? "true" : "false"}
+            onClick={() => handleOpenEvent(event)}
+            className={`agenda-event ${
+              event.tipo_evento === "bloqueio"
+                ? "event-blocked"
+                : `event-appointment ${getStatusClass(event.status)}`
+            }`}
+            style={
+              {
+                "--event-color": event.cor_agenda ?? "#71bbef",
+              } as React.CSSProperties
+            }
+          >
+            <div className="event-time">
+              <strong>{event.hora_inicio.slice(0, 5)}</strong>
+              <span>{event.hora_fim.slice(0, 5)}</span>
+            </div>
+
+            <div className="event-content">
+              <div className="event-title-row">
+                <h4>
+                  {event.tipo_evento === "bloqueio"
+                    ? event.motivo_bloqueio ?? "Horário bloqueado"
+                    : event.cliente_nome}
+                </h4>
+
+                <div className="event-title-badges">
+                  {event.pagamento_registrado ? (
+                    <span className="payment-badge">Pago</span>
+                  ) : null}
+
+                  {event.tipo_evento === "agendamento" ? (
+                    <span className="event-status">{event.status}</span>
+                  ) : null}
+                </div>
+              </div>
+
+              <p>
+                {event.tipo_evento === "agendamento"
+                  ? `${event.servico_nome} · ${event.cliente_telefone}`
+                  : event.auto_bloqueio
+                    ? "Bloqueio automático pelo expediente."
+                    : "Indisponível para novos agendamentos."}
+              </p>
+            </div>
+          </article>
+        ))}
+      </div>
+    );
+  }
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -580,16 +866,10 @@ export default function AgendaPage() {
             </div>
 
             <span>
-              {
-                events.filter((event) => event.tipo_evento === "agendamento")
-                  .length
-              }{" "}
+              {events.filter((event) => event.tipo_evento === "agendamento").length}{" "}
               clientes
               {" / "}
-              {
-                events.filter((event) => event.tipo_evento === "bloqueio")
-                  .length
-              }{" "}
+              {events.filter((event) => event.tipo_evento === "bloqueio").length}{" "}
               bloqueios
             </span>
           </div>
@@ -602,227 +882,20 @@ export default function AgendaPage() {
                 nesta tela.
               </p>
             </div>
-          ) : filterType === "dia" ? (
-            <div className="calendar-day-scroll">
-              <div className="calendar-single-day-view">
-                <div className="calendar-single-day-header">
-                  <div className="time-col" />
-                  <div className="day-col-header">
-                    {formatDateBR(selectedDate)}
-                  </div>
-                </div>
-
-                <div className="calendar-single-day-body">
-                  <div className="calendar-time-column">
-                    {generateTimeSlots().map((slot) => (
-                      <div key={slot} className="calendar-time-slot">
-                        {slot.endsWith(":00") ? slot : ""}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="calendar-day-column">
-                    {generateTimeSlots().map((slot) => (
-                      <div
-                        key={slot}
-                        className={`calendar-grid-line ${
-                          slot.endsWith(":00") ? "full-hour" : "half-hour"
-                        }`}
-                      />
-                    ))}
-
-                    {events.map((event) => {
-                      const position = getEventPosition(
-                        event.hora_inicio,
-                        event.hora_fim,
-                      );
-
-                      return (
-                        <article
-                          key={event.id}
-                          data-auto={event.auto_bloqueio ? "true" : "false"}
-                          onClick={() => handleOpenEvent(event)}
-                          className={`calendar-event ${
-                            event.tipo_evento === "bloqueio"
-                              ? "calendar-event-blocked"
-                              : `calendar-event-appointment ${getStatusClass(
-                                  event.status,
-                                )}`
-                          }`}
-                          style={
-                            {
-                              top: `${position.top}px`,
-                              height: `${position.height}px`,
-                              "--event-color": event.cor_agenda ?? "#71bbef",
-                            } as React.CSSProperties
-                          }
-                        >
-                          <div className="event-card-header">
-                            <strong>
-                              {event.hora_inicio.slice(0, 5)} -{" "}
-                              {event.hora_fim.slice(0, 5)}
-                            </strong>
-
-                            {event.pagamento_registrado ? (
-                              <span className="payment-badge">Pago</span>
-                            ) : null}
-                          </div>
-
-                          <span>
-                            {event.tipo_evento === "bloqueio"
-                              ? (event.motivo_bloqueio ?? "Horário bloqueado")
-                              : event.cliente_nome}
-                          </span>
-
-                          {event.tipo_evento === "agendamento" ? (
-                            <small>{event.servico_nome}</small>
-                          ) : null}
-                        </article>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
+          ) : filterType === "dia" && !isMobile ? (
+            renderDayCalendar()
+          ) : filterType === "dia" && isMobile ? (
+            <div className="agenda-mobile-list">
+              {events.map((event) => renderMobileEvent(event))}
             </div>
-          ) : filterType === "semana" ? (
-            <div className="calendar-week-scroll">
-              <div className="calendar-week-view">
-                <div className="calendar-week-header">
-                  <div className="time-col" />
-
-                  {getWeekDays(selectedDate).map((day) => (
-                    <div key={day.date} className="day-col-header">
-                      {day.label}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="calendar-week-body">
-                  <div className="calendar-time-column">
-                    {generateTimeSlots().map((slot) => (
-                      <div key={slot} className="calendar-time-slot">
-                        {slot.endsWith(":00") ? slot : ""}
-                      </div>
-                    ))}
-                  </div>
-
-                  {getWeekDays(selectedDate).map((day) => {
-                    const eventsByDay =
-                      groupEventsByDay(events)[day.date] || [];
-
-                    return (
-                      <div key={day.date} className="calendar-day-column">
-                        {generateTimeSlots().map((slot) => (
-                          <div
-                            key={slot}
-                            className={`calendar-grid-line ${
-                              slot.endsWith(":00") ? "full-hour" : "half-hour"
-                            }`}
-                          />
-                        ))}
-
-                        {eventsByDay.map((event) => {
-                          const pos = getEventPosition(
-                            event.hora_inicio,
-                            event.hora_fim,
-                          );
-
-                          return (
-                            <article
-                              key={event.id}
-                              data-auto={event.auto_bloqueio ? "true" : "false"}
-                              onClick={() => handleOpenEvent(event)}
-                              className={`calendar-event ${
-                                event.tipo_evento === "bloqueio"
-                                  ? "calendar-event-blocked"
-                                  : `calendar-event-appointment ${getStatusClass(
-                                      event.status,
-                                    )}`
-                              }`}
-                              style={{
-                                top: `${pos.top}px`,
-                                height: `${pos.height}px`,
-                              }}
-                            >
-                              <div className="event-card-header">
-                                <strong>{event.hora_inicio.slice(0, 5)}</strong>
-
-                                {event.pagamento_registrado ? (
-                                  <span className="payment-badge">Pago</span>
-                                ) : null}
-                              </div>
-
-                              <span>
-                                {event.tipo_evento === "bloqueio"
-                                  ? (event.motivo_bloqueio ?? "Bloqueado")
-                                  : event.cliente_nome}
-                              </span>
-
-                              {event.tipo_evento === "agendamento" ? (
-                                <small>{event.servico_nome}</small>
-                              ) : null}
-                            </article>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+          ) : filterType === "semana" && !isMobile ? (
+            renderWeekCalendar()
+          ) : filterType === "semana" && isMobile ? (
+            <div className="agenda-mobile-list">
+              {events.map((event) => renderMobileEvent(event, true))}
             </div>
           ) : (
-            <div className="agenda-list">
-              {events.map((event) => (
-                <article
-                  key={event.id}
-                  data-auto={event.auto_bloqueio ? "true" : "false"}
-                  onClick={() => handleOpenEvent(event)}
-                  className={`agenda-event ${
-                    event.tipo_evento === "bloqueio"
-                      ? "event-blocked"
-                      : `event-appointment ${getStatusClass(event.status)}`
-                  }`}
-                  style={
-                    {
-                      "--event-color": event.cor_agenda ?? "#71bbef",
-                    } as React.CSSProperties
-                  }
-                >
-                  <div className="event-time">
-                    <strong>{event.hora_inicio.slice(0, 5)}</strong>
-                    <span>{event.hora_fim.slice(0, 5)}</span>
-                  </div>
-
-                  <div className="event-content">
-                    <div className="event-title-row">
-                      <h4>
-                        {event.tipo_evento === "bloqueio"
-                          ? (event.motivo_bloqueio ?? "Horário bloqueado")
-                          : event.cliente_nome}
-                      </h4>
-
-                      <div className="event-title-badges">
-                        {event.pagamento_registrado ? (
-                          <span className="payment-badge">Pago</span>
-                        ) : null}
-
-                        {event.tipo_evento === "agendamento" ? (
-                          <span className="event-status">{event.status}</span>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <p>
-                      {event.tipo_evento === "agendamento"
-                        ? `${event.servico_nome} · ${event.cliente_telefone}`
-                        : event.auto_bloqueio
-                          ? "Bloqueio automático pelo expediente."
-                          : "Indisponível para novos agendamentos."}
-                    </p>
-                  </div>
-                </article>
-              ))}
-            </div>
+            renderListView()
           )}
         </section>
       </section>

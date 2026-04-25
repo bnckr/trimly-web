@@ -110,6 +110,7 @@ export function AppointmentModal({
   onSaved,
 }: AppointmentModalProps) {
   const { showToast } = useToast();
+
   const [clients, setClients] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [dayEvents, setDayEvents] = useState<ConflictEvent[]>([]);
@@ -121,9 +122,8 @@ export function AppointmentModal({
   const [observacoes, setObservacoes] = useState("");
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
-  const [couponPreview, setCouponPreview] = useState<CouponPreview | null>(
-    null,
-  );
+
+  const [couponPreview, setCouponPreview] = useState<CouponPreview | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -274,11 +274,13 @@ export function AppointmentModal({
       });
 
       setCouponPreview(result as CouponPreview);
+      showToast("Cupom aplicado com sucesso", "success");
     } catch (error) {
       setCouponPreview(null);
-      setErro(
-        error instanceof Error ? error.message : "Erro ao validar cupom.",
-      );
+      const message =
+        error instanceof Error ? error.message : "Erro ao validar cupom.";
+      setErro(message);
+      showToast(message, "error");
     } finally {
       setCouponLoading(false);
     }
@@ -383,6 +385,7 @@ export function AppointmentModal({
 
       if (error) {
         setErro(error.message);
+        showToast(error.message, "error");
         setLoading(false);
         return;
       }
@@ -405,14 +408,15 @@ export function AppointmentModal({
       setObservacoes("");
       setCouponPreview(null);
       setDayEvents([]);
+
       showToast("Agendamento salvo com sucesso", "success");
       onSaved();
       onClose();
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Erro ao salvar agendamento",
-        "error",
-      );
+      const message =
+        error instanceof Error ? error.message : "Erro ao salvar agendamento";
+      setErro(message);
+      showToast(message, "error");
     } finally {
       setLoading(false);
     }
@@ -422,8 +426,8 @@ export function AppointmentModal({
 
   return (
     <div className="modal-overlay">
-      <div className="appointment-modal">
-        <div className="modal-header">
+      <div className="appointment-modal appointment-modal-responsive">
+        <div className="modal-header appointment-modal-header">
           <div>
             <p>{editingEvent ? "Editar horário" : "Novo horário"}</p>
             <h2>{editingEvent ? "Editar agendamento" : "Agendar cliente"}</h2>
@@ -434,162 +438,165 @@ export function AppointmentModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="modal-form">
-          <label>
-            Cliente
-            <select
-              value={clienteId}
-              onChange={(e) => setClienteId(e.target.value)}
-              required
-            >
-              <option value="">Selecione um cliente</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.nome} - {client.telefone}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Serviço
-            <select
-              value={servicoId}
-              onChange={(e) => setServicoId(e.target.value)}
-              required
-            >
-              <option value="">Selecione um serviço</option>
-              {services.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.nome}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {selectedService ? (
-            <div className="service-preview">
-              <span>
-                Valor: {formatCurrency(Number(selectedService.valor))}
-              </span>
-              <span>Duração: {selectedService.duracao_minutos} min</span>
-            </div>
-          ) : null}
-
-          <div className="time-grid">
+        <form onSubmit={handleSubmit} className="modal-form appointment-form">
+          <div className="appointment-modal-body">
             <label>
-              Hora inicial
+              Cliente
               <select
-                value={horaInicio}
-                onChange={(e) => setHoraInicio(e.target.value)}
+                value={clienteId}
+                onChange={(e) => setClienteId(e.target.value)}
                 required
-                disabled={!selectedService || loadingSlots}
               >
-                <option value="">
-                  {!selectedService
-                    ? "Selecione um serviço primeiro"
-                    : loadingSlots
-                      ? "Carregando horários..."
-                      : "Selecione um horário"}
-                </option>
-
-                {availableSlots.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
+                <option value="">Selecione um cliente</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.nome} - {client.telefone}
                   </option>
                 ))}
               </select>
             </label>
 
             <label>
-              Hora final
-              <input type="time" value={horaFim} disabled />
+              Serviço
+              <select
+                value={servicoId}
+                onChange={(e) => setServicoId(e.target.value)}
+                required
+              >
+                <option value="">Selecione um serviço</option>
+                {services.map((service) => (
+                  <option key={service.id} value={service.id}>
+                    {service.nome}
+                  </option>
+                ))}
+              </select>
             </label>
+
+            {selectedService ? (
+              <div className="service-preview">
+                <span>
+                  Valor: {formatCurrency(Number(selectedService.valor))}
+                </span>
+                <span>Duração: {selectedService.duracao_minutos} min</span>
+              </div>
+            ) : null}
+
+            <div className="time-grid">
+              <label>
+                Hora inicial
+                <select
+                  value={horaInicio}
+                  onChange={(e) => setHoraInicio(e.target.value)}
+                  required
+                  disabled={!selectedService || loadingSlots}
+                >
+                  <option value="">
+                    {!selectedService
+                      ? "Selecione um serviço primeiro"
+                      : loadingSlots
+                        ? "Carregando horários..."
+                        : "Selecione um horário"}
+                  </option>
+
+                  {availableSlots.map((slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Hora final
+                <input type="time" value={horaFim} disabled />
+              </label>
+            </div>
+
+            {selectedService && !loadingSlots && availableSlots.length === 0 ? (
+              <div className="time-conflict">
+                Nenhum horário disponível para este serviço nesta data.
+              </div>
+            ) : null}
+
+            {horaInicio && horaFim && !hasConflict ? (
+              <div className="time-success">
+                Horário disponível: {horaInicio} até {horaFim}
+              </div>
+            ) : null}
+
+            {hasConflict ? (
+              <div className="time-conflict">
+                <strong>Conflito de horário encontrado</strong>
+                {conflicts.map((conflict) => (
+                  <p key={conflict.id}>
+                    {conflict.hora_inicio.slice(0, 5)} -{" "}
+                    {conflict.hora_fim.slice(0, 5)} ·{" "}
+                    {conflict.tipo_evento === "bloqueio"
+                      ? (conflict.motivo_bloqueio ?? "Horário bloqueado")
+                      : `${conflict.cliente_nome} · ${conflict.servico_nome}`}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+
+            <label>
+              Cupom
+              <div className="coupon-appointment-row">
+                <input
+                  type="text"
+                  placeholder="Ex: ANIVERSARIANTE10"
+                  value={cupom}
+                  onChange={(e) => setCupom(e.target.value.toUpperCase())}
+                />
+
+                <button
+                  type="button"
+                  className="appointment-save-button"
+                  onClick={handleApplyCoupon}
+                  disabled={couponLoading || !cupom.trim()}
+                >
+                  {couponLoading ? "Validando..." : "Aplicar"}
+                </button>
+              </div>
+            </label>
+
+            {couponPreview ? (
+              <div className="coupon-appointment-preview">
+                <span>
+                  Cupom aplicado:{" "}
+                  <strong>{couponPreview.coupon.nome_cupom}</strong>
+                </span>
+                <span>
+                  Valor original: {formatCurrency(couponPreview.valorOriginal)}
+                </span>
+                <span>
+                  Desconto: {couponPreview.descontoPercentual}% (
+                  {formatCurrency(couponPreview.valorDesconto)})
+                </span>
+                <strong>
+                  Valor final: {formatCurrency(couponPreview.valorFinal)}
+                </strong>
+              </div>
+            ) : null}
+
+            <label>
+              Observações
+              <textarea
+                placeholder="Observações sobre o atendimento"
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+              />
+            </label>
+
+            {erro ? <p className="modal-error">{erro}</p> : null}
           </div>
 
-          {selectedService && !loadingSlots && availableSlots.length === 0 ? (
-            <div className="time-conflict">
-              Nenhum horário disponível para este serviço nesta data.
-            </div>
-          ) : null}
-
-          {horaInicio && horaFim && !hasConflict ? (
-            <div className="time-success">
-              Horário disponível: {horaInicio} até {horaFim}
-            </div>
-          ) : null}
-
-          {hasConflict ? (
-            <div className="time-conflict">
-              <strong>Conflito de horário encontrado</strong>
-              {conflicts.map((conflict) => (
-                <p key={conflict.id}>
-                  {conflict.hora_inicio.slice(0, 5)} -{" "}
-                  {conflict.hora_fim.slice(0, 5)} ·{" "}
-                  {conflict.tipo_evento === "bloqueio"
-                    ? (conflict.motivo_bloqueio ?? "Horário bloqueado")
-                    : `${conflict.cliente_nome} · ${conflict.servico_nome}`}
-                </p>
-              ))}
-            </div>
-          ) : null}
-
-          <label>
-            Cupom
-            <div className="coupon-appointment-row">
-              <input
-                type="text"
-                placeholder="Ex: ANIVERSARIANTE10"
-                value={cupom}
-                onChange={(e) => setCupom(e.target.value.toUpperCase())}
-              />
-
-              <button
-                type="button"
-                className="appointment-save-button"
-                onClick={handleApplyCoupon}
-                disabled={couponLoading || !cupom.trim()}
-              >
-                {couponLoading ? "Validando..." : "Aplicar"}
-              </button>
-            </div>
-          </label>
-
-          {couponPreview ? (
-            <div className="coupon-appointment-preview">
-              <span>
-                Cupom aplicado:{" "}
-                <strong>{couponPreview.coupon.nome_cupom}</strong>
-              </span>
-              <span>
-                Valor original: {formatCurrency(couponPreview.valorOriginal)}
-              </span>
-              <span>
-                Desconto: {couponPreview.descontoPercentual}% (
-                {formatCurrency(couponPreview.valorDesconto)})
-              </span>
-              <strong>
-                Valor final: {formatCurrency(couponPreview.valorFinal)}
-              </strong>
-            </div>
-          ) : null}
-
-          <label>
-            Observações
-            <textarea
-              placeholder="Observações sobre o atendimento"
-              value={observacoes}
-              onChange={(e) => setObservacoes(e.target.value)}
-            />
-          </label>
-
-          {erro ? <p className="modal-error">{erro}</p> : null}
-
-          <div className="appointment-modal-actions">
+          <div className="appointment-modal-actions appointment-modal-footer">
             <button
               type="button"
               className="appointment-cancel-button"
               onClick={onClose}
+              disabled={loading}
             >
               Cancelar
             </button>
