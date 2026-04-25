@@ -1,34 +1,81 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { getMyProfile, updateMyProfile, uploadAvatar } from "@/actions/profile";
-import "./perfil.css";
-import { Toast } from "@/components/ui/toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useToast } from "@/components/ui/toast-provider";
+import "./perfil.css";
+
+type Profile = {
+  id: string;
+  nome: string;
+  email: string | null;
+  telefone: string | null;
+  especialidade: string | null;
+  cor_agenda: string | null;
+  intervalo_padrao_minutos: number;
+  observacoes: string | null;
+  avatar_url: string | null;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+function getInitials(nome: string | null | undefined) {
+  if (!nome) return "?";
+
+  const parts = nome.trim().split(" ").filter(Boolean);
+
+  if (parts.length === 0) return "?";
+
+  if (parts.length === 1) {
+    return parts[0].charAt(0).toUpperCase();
+  }
+
+  return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+}
 
 export default function PerfilPage() {
-  const [profile, setProfile] = useState<any>(null);
+  const { showToast } = useToast();
+
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const data = await getMyProfile();
-      setProfile(data);
-      setLoading(false);
+      try {
+        const data = await getMyProfile();
+        setProfile(data as Profile);
+      } catch (error) {
+        showToast("Erro ao carregar perfil", "error");
+      } finally {
+        setLoading(false);
+      }
     }
 
     load();
-  }, []);
+  }, [showToast]);
 
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
+  function updateProfileField<K extends keyof Profile>(
+    field: K,
+    value: Profile[K],
+  ) {
+    setProfile((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [field]: value,
+      };
+    });
+  }
 
   async function handleSave() {
+    if (!profile) return;
+
     try {
       setSaving(true);
 
@@ -41,47 +88,49 @@ export default function PerfilPage() {
         observacoes: profile.observacoes,
       });
 
-      setToast({
-        message: "Perfil atualizado com sucesso",
-        type: "success",
-      });
+      showToast("Perfil atualizado com sucesso", "success");
     } catch (error) {
-      setToast({
-        message: "Erro ao salvar perfil",
-        type: "error",
-      });
+      showToast(
+        error instanceof Error ? error.message : "Erro ao salvar perfil",
+        "error",
+      );
     } finally {
       setSaving(false);
     }
   }
 
-  function getInitials(nome: string) {
-    if (!nome) return "?";
-
-    const parts = nome.trim().split(" ");
-
-    if (parts.length === 1) {
-      return parts[0].charAt(0).toUpperCase();
-    }
-
-    return (
-      parts[0].charAt(0) + parts[parts.length - 1].charAt(0)
-    ).toUpperCase();
-  }
-
-  async function handleAvatarChange(e: any) {
+  async function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+
     if (!file) return;
 
-    const url = await uploadAvatar(file);
+    try {
+      setUploadingAvatar(true);
 
-    setProfile((prev: any) => ({
-      ...prev,
-      avatar_url: url,
-    }));
+      const url = await uploadAvatar(file);
+
+      setProfile((prev) => {
+        if (!prev) return prev;
+
+        return {
+          ...prev,
+          avatar_url: url,
+        };
+      });
+
+      showToast("Foto atualizada com sucesso", "success");
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Erro ao atualizar foto",
+        "error",
+      );
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = "";
+    }
   }
 
-  if (loading) return <LoadingSpinner />;
+  if (loading || !profile) return <LoadingSpinner />;
 
   return (
     <main className="perfil-shell">
@@ -89,93 +138,152 @@ export default function PerfilPage() {
 
       <section className="perfil-main">
         <Header profile={profile} />
+
         <div className="perfil-card">
-          <h2>Perfil profissional</h2>
+          <div className="perfil-card-header">
+            <div>
+              <p className="perfil-eyebrow">Configurações</p>
+              <h2>Perfil profissional</h2>
+              <span>Atualize seus dados, foto e preferências da agenda.</span>
+            </div>
+          </div>
+
           <div className="perfil-form">
-            <div className="perfil-avatar">
-              {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt={`Foto de ${profile.nome}`} />
-              ) : (
-                <div className="avatar-fallback">
-                  {getInitials(profile.nome)}
+            <section className="perfil-avatar-card">
+              <div className="perfil-avatar">
+                {profile.avatar_url ? (
+                  <img src={profile.avatar_url} alt={`Foto de ${profile.nome}`} />
+                ) : (
+                  <div className="avatar-fallback">
+                    {getInitials(profile.nome)}
+                  </div>
+                )}
+              </div>
+
+              <div className="perfil-avatar-info">
+                <strong>{profile.nome || "Profissional"}</strong>
+                <span>{profile.email ?? "E-mail não informado"}</span>
+
+                <label className="avatar-upload-button">
+                  {uploadingAvatar ? "Enviando..." : "Alterar foto"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    disabled={uploadingAvatar}
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section className="perfil-section">
+              <div className="perfil-section-title">
+                <h3>Dados profissionais</h3>
+                <p>Essas informações aparecem no sistema e nos agendamentos.</p>
+              </div>
+
+              <div className="perfil-fields-grid">
+                <div className="form-group">
+                  <label>Nome</label>
+                  <input
+                    value={profile.nome || ""}
+                    onChange={(e) => updateProfileField("nome", e.target.value)}
+                    placeholder="Seu nome"
+                  />
                 </div>
-              )}
-              <input type="file" onChange={handleAvatarChange} />
-            </div>
 
-            <div className="form-group">
-              <label>Nome</label>
-              <input
-                value={profile.nome || ""}
-                onChange={(e) =>
-                  setProfile({ ...profile, nome: e.target.value })
-                }
-              />
-            </div>
+                <div className="form-group">
+                  <label>Telefone</label>
+                  <input
+                    value={profile.telefone || ""}
+                    onChange={(e) =>
+                      updateProfileField("telefone", e.target.value)
+                    }
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
 
-            <div className="form-group">
-              <label>Telefone</label>
-              <input
-                value={profile.telefone || ""}
-                onChange={(e) =>
-                  setProfile({ ...profile, telefone: e.target.value })
-                }
-              />
-            </div>
+                <div className="form-group full">
+                  <label>Especialidade</label>
+                  <input
+                    value={profile.especialidade || ""}
+                    onChange={(e) =>
+                      updateProfileField("especialidade", e.target.value)
+                    }
+                    placeholder="Ex: Cabeleireira, manicure, barbeira..."
+                  />
+                </div>
+              </div>
+            </section>
 
-            <div className="form-group">
-              <label>Especialidade</label>
-              <input
-                value={profile.especialidade || ""}
-                onChange={(e) =>
-                  setProfile({ ...profile, especialidade: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="form-row">
-              <div className="form-group small">
-                <label>Cor da agenda</label>
-                <input
-                  type="color"
-                  value={profile.cor_agenda || "#71bbef"}
-                  onChange={(e) =>
-                    setProfile({ ...profile, cor_agenda: e.target.value })
-                  }
-                />
+            <section className="perfil-section">
+              <div className="perfil-section-title">
+                <h3>Agenda</h3>
+                <p>Personalize sua cor e o intervalo padrão entre atendimentos.</p>
               </div>
 
-              <div className="form-group small">
-                <label>Intervalo (min)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={profile.intervalo_padrao_minutos ?? 0}
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Cor da agenda</label>
+
+                  <div className="color-input-row">
+                    <input
+                      type="color"
+                      value={profile.cor_agenda || "#71bbef"}
+                      onChange={(e) =>
+                        updateProfileField("cor_agenda", e.target.value)
+                      }
+                    />
+
+                    <span>{profile.cor_agenda || "#71bbef"}</span>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Intervalo entre atendimentos (min)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={profile.intervalo_padrao_minutos ?? 0}
+                    onChange={(e) =>
+                      updateProfileField(
+                        "intervalo_padrao_minutos",
+                        Number(e.target.value),
+                      )
+                    }
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="perfil-section">
+              <div className="perfil-section-title">
+                <h3>Observações</h3>
+                <p>Anotações internas sobre sua rotina ou preferências.</p>
+              </div>
+
+              <div className="form-group">
+                <label>Observações</label>
+                <textarea
+                  value={profile.observacoes || ""}
                   onChange={(e) =>
-                    setProfile({
-                      ...profile,
-                      intervalo_padrao_minutos: Number(e.target.value),
-                    })
+                    updateProfileField("observacoes", e.target.value)
                   }
+                  placeholder="Ex: Prefiro deixar 10 minutos entre atendimentos..."
                 />
               </div>
-            </div>
+            </section>
 
-            <button
-              className="perfil-save-button"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? "Salvando..." : "Salvar alterações"}
-              {toast && (
-                <Toast
-                  message={toast.message}
-                  type={toast.type}
-                  onClose={() => setToast(null)}
-                />
-              )}
-            </button>
-          </div>{" "}
+            <div className="perfil-footer">
+              <button
+                className="perfil-save-button"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? "Salvando..." : "Salvar alterações"}
+              </button>
+            </div>
+          </div>
         </div>
       </section>
     </main>

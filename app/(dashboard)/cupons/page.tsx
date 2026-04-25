@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { CouponModal } from '@/components/cupons/coupon-modal'
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { useToast } from '@/components/ui/toast-provider'
 import {
   activateCoupon,
   deactivateCoupon,
@@ -29,8 +30,32 @@ function formatDate(date: string | null) {
   return new Date(year, month - 1, day).toLocaleDateString('pt-BR')
 }
 
+function getValidityLabel(coupon: Coupon) {
+  if (!coupon.validade_inicial && !coupon.validade_final) {
+    return 'Sem validade'
+  }
+
+  if (coupon.validade_inicial && coupon.validade_final) {
+    return `${formatDate(coupon.validade_inicial)} até ${formatDate(
+      coupon.validade_final,
+    )}`
+  }
+
+  if (coupon.validade_inicial) {
+    return `A partir de ${formatDate(coupon.validade_inicial)}`
+  }
+
+  return `Até ${formatDate(coupon.validade_final)}`
+}
+
+function getCouponLimitLabel(limit: number | null) {
+  if (!limit) return 'Uso ilimitado'
+  return `${limit} uso${limit === 1 ? '' : 's'}`
+}
+
 export default function CuponsPage() {
   const router = useRouter()
+  const { showToast } = useToast()
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [coupons, setCoupons] = useState<Coupon[]>([])
@@ -40,8 +65,13 @@ export default function CuponsPage() {
   const [loading, setLoading] = useState(true)
 
   async function loadCoupons() {
-    const data = await listCoupons()
-    setCoupons((data ?? []) as Coupon[])
+    try {
+      const data = await listCoupons()
+      setCoupons((data ?? []) as Coupon[])
+    } catch (error) {
+      console.error(error)
+      showToast('Erro ao carregar cupons', 'error')
+    }
   }
 
   useEffect(() => {
@@ -79,10 +109,19 @@ export default function CuponsPage() {
 
     if (!term) return coupons
 
-    return coupons.filter((coupon) =>
-      coupon.nome_cupom.toLowerCase().includes(term)
-    )
+    return coupons.filter((coupon) => {
+      const type = coupon.uso_aniversario ? 'aniversario aniversário' : 'geral'
+
+      return (
+        coupon.nome_cupom.toLowerCase().includes(term) ||
+        type.includes(term) ||
+        String(coupon.percentual_desconto).includes(term)
+      )
+    })
   }, [coupons, search])
+
+  const activeCoupons = coupons.filter((coupon) => coupon.ativo).length
+  const birthdayCoupons = coupons.filter((coupon) => coupon.uso_aniversario).length
 
   async function handleToggleCoupon(coupon: Coupon) {
     const message = coupon.ativo
@@ -96,18 +135,33 @@ export default function CuponsPage() {
     try {
       if (coupon.ativo) {
         await deactivateCoupon(coupon.id)
+        showToast('Cupom inativado com sucesso', 'success')
       } else {
         await activateCoupon(coupon.id)
+        showToast('Cupom ativado com sucesso', 'success')
       }
 
       await loadCoupons()
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro ao alterar cupom.')
+      showToast(
+        error instanceof Error ? error.message : 'Erro ao alterar cupom.',
+        'error',
+      )
     }
   }
 
+  function openCreateModal() {
+    setSelectedCoupon(null)
+    setModalOpen(true)
+  }
+
+  function openEditModal(coupon: Coupon) {
+    setSelectedCoupon(coupon)
+    setModalOpen(true)
+  }
+
   if (loading) {
-    return <LoadingSpinner />;
+    return <LoadingSpinner />
   }
 
   return (
@@ -121,26 +175,36 @@ export default function CuponsPage() {
           <div>
             <p className="cupons-eyebrow">Campanhas e descontos</p>
             <h2>Cupons</h2>
+            <span>
+              {activeCoupons} ativos · {birthdayCoupons} de aniversário ·{' '}
+              {coupons.length} cadastrados
+            </span>
           </div>
 
-          <button
-            className="primary-button"
-            onClick={() => {
-              setSelectedCoupon(null)
-              setModalOpen(true)
-            }}
-          >
+          <button className="primary-button" onClick={openCreateModal}>
             Novo cupom
           </button>
         </div>
 
         <section className="cupons-panel">
           <div className="cupons-panel-header">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nome do cupom..."
-            />
+            <div className="cupons-search">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar cupom, tipo ou desconto..."
+              />
+
+              {search ? (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  aria-label="Limpar busca"
+                >
+                  ×
+                </button>
+              ) : null}
+            </div>
 
             <span>
               {filteredCoupons.length}{' '}
@@ -165,38 +229,44 @@ export default function CuponsPage() {
               </div>
 
               {filteredCoupons.map((coupon) => (
-                <div className="cupons-table-row" key={coupon.id}>
-                  <strong>{coupon.nome_cupom}</strong>
+                <article className="cupons-table-row" key={coupon.id}>
+                  <div className="coupon-main-info">
+                    <strong>{coupon.nome_cupom}</strong>
 
-                  <span>{coupon.percentual_desconto}%</span>
+                    <div className="coupon-mobile-meta">
+                      <span>{coupon.percentual_desconto}% de desconto</span>
+                      <span>{getValidityLabel(coupon)}</span>
+                    </div>
+                  </div>
 
-                  <span>
-                    {coupon.validade_inicial || coupon.validade_final
-                      ? `${formatDate(coupon.validade_inicial)} até ${formatDate(
-                          coupon.validade_final
-                        )}`
-                      : 'Sem validade'}
+                  <span className="desktop-only">
+                    {coupon.percentual_desconto}%
                   </span>
 
-                  <span>
-                    {coupon.uso_aniversario ? 'Aniversário' : 'Geral'}
-                  </span>
+                  <span className="desktop-only">{getValidityLabel(coupon)}</span>
+
+                  <div className="coupon-badges">
+                    <span
+                      className={
+                        coupon.uso_aniversario
+                          ? 'coupon-type-badge birthday'
+                          : 'coupon-type-badge'
+                      }
+                    >
+                      {coupon.uso_aniversario ? 'Aniversário' : 'Geral'}
+                    </span>
+
+                    <small>{getCouponLimitLabel(coupon.quantidade_maxima_uso)}</small>
+                  </div>
 
                   <span
-                    className={
-                      coupon.ativo ? 'status-active' : 'status-inactive'
-                    }
+                    className={coupon.ativo ? 'status-active' : 'status-inactive'}
                   >
                     {coupon.ativo ? 'Ativo' : 'Inativo'}
                   </span>
 
                   <div className="cupons-actions">
-                    <button
-                      onClick={() => {
-                        setSelectedCoupon(coupon)
-                        setModalOpen(true)
-                      }}
-                    >
+                    <button onClick={() => openEditModal(coupon)}>
                       Editar
                     </button>
 
@@ -204,7 +274,7 @@ export default function CuponsPage() {
                       {coupon.ativo ? 'Inativar' : 'Ativar'}
                     </button>
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           )}
@@ -215,7 +285,10 @@ export default function CuponsPage() {
         open={modalOpen}
         coupon={selectedCoupon}
         onClose={() => setModalOpen(false)}
-        onSaved={loadCoupons}
+        onSaved={async () => {
+          await loadCoupons()
+          setModalOpen(false)
+        }}
       />
     </main>
   )

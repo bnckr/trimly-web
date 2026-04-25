@@ -14,60 +14,159 @@
 .perfil-card {
   background: #ffffff;
   border-radius: 28px;
-  padding: 32px;
+  padding: 28px;
   box-shadow: 8px 10px 18px rgba(0, 0, 0, 0.1);
 }
 
-.perfil-card h2 {
-  margin: 0 0 28px;
+.perfil-card-header {
+  margin-bottom: 24px;
+}
+
+.perfil-eyebrow {
+  margin: 0 0 4px;
+  color: #878484;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.perfil-card-header h2 {
+  margin: 0;
   color: #000000;
   font-family: "Afacad Flux", sans-serif;
-  font-size: 38px;
+  font-size: 34px;
+  line-height: 1;
   font-weight: 800;
+}
+
+.perfil-card-header span {
+  display: block;
+  margin-top: 8px;
+  color: #878484;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .perfil-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-width: 760px;
+  gap: 18px;
+  max-width: 820px;
+}
+
+.perfil-avatar-card,
+.perfil-section {
+  background: #f9fcff;
+  border: 1px solid #e5edf3;
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.perfil-avatar-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .perfil-avatar {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.perfil-avatar img,
+.avatar-fallback {
+  width: 82px;
+  height: 82px;
+  border-radius: 24px;
+  object-fit: cover;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
 }
 
 .perfil-avatar img {
-  width: 84px;
-  height: 84px;
-  border-radius: 22px;
-  object-fit: cover;
-
-  box-shadow:
-    0 6px 18px rgba(0, 0, 0, 0.12);
-
-  transition: 0.2s ease;
+  display: block;
 }
 
-.perfil-avatar img:hover {
-  transform: scale(1.03);
+.avatar-fallback {
+  background: #71bbef;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 26px;
 }
 
-.perfil-avatar input {
-  width: auto;
-  height: auto;
-  border: none;
-  padding: 0;
-  font-family: "Inter", sans-serif;
+.perfil-avatar-info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.perfil-avatar-info strong {
+  color: #000000;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.perfil-avatar-info span {
+  color: #878484;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.avatar-upload-button {
+  width: fit-content;
+  height: 38px;
+  border-radius: 999px;
+  padding: 0 16px;
+  background: #000000;
+  color: #ffffff;
+  display: inline-grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.avatar-upload-button input {
+  display: none;
+}
+
+.perfil-section {
+  display: grid;
+  gap: 16px;
+}
+
+.perfil-section-title h3 {
+  margin: 0;
+  color: #000000;
+  font-family: "Afacad Flux", sans-serif;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.perfil-section-title p {
+  margin: 6px 0 0;
+  color: #878484;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.perfil-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.form-group.full {
+  grid-column: 1 / -1;
 }
 
 .form-group label {
@@ -107,11 +206,34 @@
   border-color: #71bbef;
 }
 
-.perfil-form input[type="color"] {
-  width: 100%;
+.color-input-row {
+  height: 48px;
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.color-input-row input[type="color"] {
+  width: 64px;
   height: 48px;
   padding: 5px;
   cursor: pointer;
+}
+
+.color-input-row span {
+  color: #878484;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.perfil-footer {
+  display: flex;
+  justify-content: flex-end;
+  position: sticky;
+  bottom: 0;
+  background: #ffffff;
+  padding-top: 12px;
 }
 
 .perfil-save-button {
@@ -125,7 +247,7 @@
   color: #ffffff;
   font-weight: 800;
   cursor: pointer;
-  margin-top: 8px;
+  transition: 0.2s ease;
 }
 
 .perfil-save-button:hover {
@@ -137,110 +259,65 @@
   cursor: not-allowed;
 }
 
-.avatar-fallback {
-  width: 82px;
-  height: 82px;
-  border-radius: 999px;
-  background: #71bbef;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 26px;
-  border: 3px solid #71bbef;
-}
-
 @media (max-width: 900px) {
   .perfil-shell {
     grid-template-columns: 1fr;
   }
 
   .perfil-main {
-    padding: 20px;
-    padding-top: 78px;
+    padding: 78px 20px 24px;
   }
 
   .perfil-card {
-    padding: 24px;
+    padding: 22px;
+    border-radius: 24px;
   }
 
+  .perfil-card-header h2 {
+    font-size: 30px;
+  }
+
+  .perfil-fields-grid,
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .perfil-footer {
+    justify-content: stretch;
   }
 
   .perfil-save-button {
     width: 100%;
   }
+}
 
-  .mobile-menu-button {
-    position: fixed;
-    top: 18px;
-    left: 18px;
-    z-index: 120;
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    background: #ffffff;
-    color: #000000;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+@media (max-width: 520px) {
+  .perfil-main {
+    padding-inline: 16px;
+  }
+
+  .perfil-card {
+    border-radius: 20px;
+    padding: 18px;
+  }
+
+  .perfil-avatar-card {
+    align-items: flex-start;
+  }
+
+  .perfil-avatar img,
+  .avatar-fallback {
+    width: 70px;
+    height: 70px;
+    border-radius: 20px;
+  }
+
+  .avatar-fallback {
     font-size: 22px;
-    font-weight: 800;
   }
 
-  .sidebar {
-    position: fixed;
-    inset: 0 auto 0 0;
-    z-index: 130;
-    width: min(82vw, 300px);
-    transform: translateX(-105%);
-    transition: transform 0.25s ease;
+  .perfil-section {
+    padding: 16px;
+    border-radius: 20px;
   }
-
-  .sidebar.sidebar-open {
-    transform: translateX(0);
-  }
-
-  .sidebar-overlay {
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 125;
-    background: rgba(0, 0, 0, 0.35);
-  }
-
-  .sidebar-mobile-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-  }
-
-  .sidebar-close-button {
-    display: grid;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 999px;
-    background: #000000;
-    color: #ffffff;
-    font-size: 24px;
-    line-height: 1;
-  }
-}
-
-
-.mobile-menu-button {
-  display: none;
-}
-
-.sidebar-mobile-header {
-  display: block;
-}
-
-.sidebar-close-button,
-.sidebar-overlay {
-  display: none;
 }

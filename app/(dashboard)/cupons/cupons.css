@@ -1,10 +1,25 @@
 @import url("https://fonts.googleapis.com/css2?family=Afacad+Flux:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap");
 
+:root {
+  --black: #000000;
+  --white: #ffffff;
+  --blue: #71bbef;
+  --blue-dark: #2797e5;
+  --gray: #878484;
+  --gray-light: #aeaeae;
+  --bg: #c7dae6;
+  --surface: #f4f8fb;
+  --border: #e5edf3;
+  --danger: #e74c3c;
+  --shadow-soft: 8px 10px 18px rgba(0, 0, 0, 0.1);
+  --shadow-modal: 12px 18px 44px rgba(0, 0, 0, 0.28);
+}
+
 .cupons-loading {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: #c7dae6;
+  background: var(--bg);
   font-family: "Inter", sans-serif;
 }
 
@@ -12,7 +27,7 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: 280px 1fr;
-  background: #c7dae6;
+  background: var(--bg);
   font-family: "Inter", sans-serif;
 }
 
@@ -22,66 +37,132 @@
 }
 
 .cupons-toolbar {
-  background: #ffffff;
-  border-radius: 26px;
-  padding: 26px 28px;
-  box-shadow: 8px 10px 20px rgba(0, 0, 0, 0.12);
+  background: var(--white);
+  border-radius: 24px;
+  padding: 20px 22px;
+  box-shadow: var(--shadow-soft);
   display: flex;
   justify-content: space-between;
   gap: 18px;
   align-items: center;
-  margin-bottom: 26px;
+  margin-bottom: 22px;
 }
 
 .cupons-eyebrow {
   margin: 0 0 4px;
-  color: #878484;
-  font-size: 14px;
-  font-weight: 700;
+  color: var(--gray);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .cupons-toolbar h2 {
   margin: 0;
   font-family: "Afacad Flux", sans-serif;
-  font-size: 40px;
+  font-size: 34px;
+  line-height: 1;
   font-weight: 800;
-  color: #000000;
+  color: var(--black);
+}
+
+.cupons-toolbar span {
+  display: block;
+  margin-top: 6px;
+  color: var(--gray);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.primary-button,
+.secondary-button {
+  height: 42px;
+  border: none;
+  border-radius: 999px;
+  padding: 0 18px;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.2s ease;
+  white-space: nowrap;
+}
+
+.primary-button {
+  background: var(--blue);
+  color: var(--white);
+}
+
+.primary-button:hover,
+.secondary-button:hover {
+  background: var(--blue-dark);
+}
+
+.secondary-button {
+  background: var(--black);
+  color: var(--white);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .cupons-panel {
-  background: #ffffff;
-  border-radius: 28px;
-  padding: 28px;
-  box-shadow: 8px 10px 18px rgba(0, 0, 0, 0.1);
+  background: var(--white);
+  border-radius: 26px;
+  padding: 24px;
+  box-shadow: var(--shadow-soft);
   min-height: 620px;
 }
 
 .cupons-panel-header {
   display: flex;
   justify-content: space-between;
-  gap: 18px;
+  gap: 16px;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 
-.cupons-panel-header input {
+.cupons-search {
+  position: relative;
+  width: min(100%, 480px);
+}
+
+.cupons-search input {
   width: 100%;
-  max-width: 420px;
-  height: 48px;
-  border: 1.5px solid #c7dae6;
+  height: 46px;
+  border: 1.5px solid var(--bg);
   border-radius: 999px;
-  padding: 0 18px;
+  padding: 0 46px 0 18px;
   font-family: "Inter", sans-serif;
   outline: none;
+  color: var(--black);
+  background: var(--white);
 }
 
-.cupons-panel-header input:focus {
-  border-color: #2797e5;
+.cupons-search input:focus {
+  border-color: var(--blue-dark);
 }
 
-.cupons-panel-header span {
-  background: #f4f8fb;
-  color: #2797e5;
+.cupons-search button {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--gray);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cupons-panel-header > span {
+  background: var(--surface);
+  color: var(--blue-dark);
   border-radius: 999px;
   padding: 10px 16px;
   font-size: 13px;
@@ -90,26 +171,26 @@
 }
 
 .cupons-empty {
-  min-height: 420px;
-  border: 2px dashed #c7dae6;
-  border-radius: 26px;
+  min-height: 360px;
+  border: 2px dashed var(--bg);
+  border-radius: 24px;
   display: grid;
   place-items: center;
   text-align: center;
-  padding: 32px;
+  padding: 28px;
 }
 
 .cupons-empty h3 {
   margin: 0 0 8px;
-  color: #000000;
+  color: var(--black);
   font-family: "Afacad Flux", sans-serif;
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 800;
 }
 
 .cupons-empty p {
   margin: 0;
-  color: #878484;
+  color: var(--gray);
 }
 
 .cupons-table {
@@ -120,32 +201,87 @@
 .cupons-table-head,
 .cupons-table-row {
   display: grid;
-  grid-template-columns: 1.1fr 0.7fr 1.4fr 0.8fr 0.7fr 1fr;
+  grid-template-columns: 1.15fr 0.65fr 1.35fr 0.9fr 0.7fr 1fr;
   gap: 14px;
   align-items: center;
 }
 
 .cupons-table-head {
   padding: 0 18px 8px;
-  color: #878484;
+  color: var(--gray);
   font-size: 13px;
   font-weight: 800;
 }
 
 .cupons-table-row {
   background: #f9fcff;
-  border: 1px solid #e5edf3;
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--blue);
   border-radius: 18px;
-  padding: 16px 18px;
+  padding: 15px 16px;
+  transition: 0.2s ease;
 }
 
+.cupons-table-row:hover {
+  transform: translateY(-1px);
+  box-shadow: 4px 8px 14px rgba(0, 0, 0, 0.06);
+}
+
+.coupon-main-info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.coupon-main-info strong,
 .cupons-table-row strong {
-  color: #000000;
+  color: var(--black);
+  font-size: 15px;
+  font-weight: 800;
 }
 
-.cupons-table-row span {
-  color: #878484;
+.coupon-mobile-meta {
+  display: none;
+  gap: 3px;
+}
+
+.coupon-mobile-meta span {
+  color: var(--gray);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cupons-table-row > span {
+  color: var(--gray);
   font-size: 14px;
+}
+
+.coupon-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.coupon-badges small {
+  color: var(--gray);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.coupon-type-badge {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: #eef4f8;
+  color: var(--gray);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.coupon-type-badge.birthday {
+  background: rgba(113, 187, 239, 0.18);
+  color: var(--blue-dark);
 }
 
 .status-active,
@@ -159,12 +295,12 @@
 
 .status-active {
   background: rgba(39, 151, 229, 0.12);
-  color: #2797e5 !important;
+  color: var(--blue-dark) !important;
 }
 
 .status-inactive {
   background: #eeeeee;
-  color: #878484 !important;
+  color: var(--gray) !important;
 }
 
 .cupons-actions {
@@ -181,24 +317,12 @@
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
-  background: #000000;
-  color: #ffffff;
+  background: var(--black);
+  color: var(--white);
 }
 
 .cupons-actions button:first-child {
-  background: #71bbef;
-}
-
-.coupon-modal {
-  width: 100%;
-  max-width: 680px;
-  max-height: 92vh;
-  overflow-y: auto;
-  background: #ffffff;
-  border-radius: 28px;
-  padding: 30px;
-  box-shadow: 12px 18px 44px rgba(0, 0, 0, 0.28);
-  font-family: "Inter", sans-serif;
+  background: var(--blue);
 }
 
 .modal-backdrop {
@@ -211,6 +335,18 @@
   padding: 24px;
 }
 
+.coupon-modal {
+  width: 100%;
+  max-width: 680px;
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--white);
+  border-radius: 28px;
+  padding: 30px;
+  box-shadow: var(--shadow-modal);
+  font-family: "Inter", sans-serif;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -221,14 +357,14 @@
 
 .modal-eyebrow {
   margin: 0 0 4px;
-  color: #878484;
+  color: var(--gray);
   font-size: 14px;
   font-weight: 700;
 }
 
 .modal-header h2 {
   margin: 0;
-  color: #000000;
+  color: var(--black);
   font-family: "Afacad Flux", sans-serif;
   font-size: 34px;
   font-weight: 800;
@@ -239,8 +375,8 @@
   height: 38px;
   border: none;
   border-radius: 999px;
-  background: #000000;
-  color: #ffffff;
+  background: var(--black);
+  color: var(--white);
   font-size: 24px;
   line-height: 1;
   cursor: pointer;
@@ -254,7 +390,7 @@
 .modal-form label {
   display: grid;
   gap: 8px;
-  color: #000000;
+  color: var(--black);
   font-size: 14px;
   font-weight: 800;
 }
@@ -262,16 +398,16 @@
 .modal-form input {
   width: 100%;
   height: 46px;
-  border: 1.5px solid #c7dae6;
+  border: 1.5px solid var(--bg);
   border-radius: 16px;
   padding: 0 16px;
   font-family: "Inter", sans-serif;
-  color: #000000;
+  color: var(--black);
   outline: none;
 }
 
 .modal-form input:focus {
-  border-color: #2797e5;
+  border-color: var(--blue-dark);
 }
 
 .modal-form-grid {
@@ -290,7 +426,7 @@
   display: flex !important;
   align-items: center;
   gap: 10px !important;
-  color: #878484 !important;
+  color: var(--gray) !important;
 }
 
 .modal-checkbox input {
@@ -305,58 +441,45 @@
   margin-top: 10px;
 }
 
-.primary-button,
-.secondary-button {
-  height: 44px;
-  border: none;
-  border-radius: 999px;
-  padding: 0 20px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-.primary-button {
-  background: #71bbef;
-  color: #ffffff;
-}
-
-.primary-button:hover {
-  background: #2797e5;
-}
-
-.secondary-button {
-  background: #000000;
-  color: #ffffff;
-}
-
-.secondary-button:hover {
-  background: #2797e5;
-}
-
-.primary-button:disabled,
-.secondary-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 @media (max-width: 980px) {
   .cupons-shell {
     grid-template-columns: 1fr;
   }
 
   .cupons-main {
-    padding-top: 78px;
+    padding: 78px 20px 24px;
   }
 
-  .sidebar {
-    display: none;
+  .cupons-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 20px;
   }
 
-  .cupons-toolbar,
+  .cupons-toolbar h2 {
+    font-size: 30px;
+  }
+
+  .cupons-toolbar .primary-button {
+    width: 100%;
+  }
+
+  .cupons-panel {
+    padding: 20px;
+    border-radius: 24px;
+  }
+
   .cupons-panel-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+  }
+
+  .cupons-search {
+    width: 100%;
+  }
+
+  .cupons-panel-header > span {
+    width: fit-content;
   }
 
   .cupons-table-head {
@@ -365,10 +488,32 @@
 
   .cupons-table-row {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .desktop-only {
+    display: none;
+  }
+
+  .coupon-mobile-meta {
+    display: grid;
+  }
+
+  .coupon-badges {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
   }
 
   .cupons-actions {
     justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .cupons-actions button {
+    flex: 1;
+    min-width: 120px;
+    height: 38px;
   }
 
   .modal-form-grid {
@@ -376,74 +521,45 @@
   }
 }
 
-.mobile-menu-button {
-  display: none;
+@media (max-width: 720px) {
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .coupon-modal {
+    width: 100%;
+    max-width: none;
+    height: 92vh;
+    max-height: 92vh;
+    border-radius: 28px 28px 0 0;
+    padding: 22px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
 }
 
-.sidebar-mobile-header {
-  display: block;
-}
-
-.sidebar-close-button,
-.sidebar-overlay {
-  display: none;
-}
-
-@media (max-width: 900px) {
-  .mobile-menu-button {
-    position: fixed;
-    top: 18px;
-    left: 18px;
-    z-index: 120;
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    background: #ffffff;
-    color: #000000;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
-    font-size: 22px;
-    font-weight: 800;
+@media (max-width: 520px) {
+  .cupons-main {
+    padding-inline: 16px;
   }
 
-  .sidebar {
-    position: fixed;
-    inset: 0 auto 0 0;
-    z-index: 130;
-    width: min(82vw, 300px);
-    transform: translateX(-105%);
-    transition: transform 0.25s ease;
+  .cupons-toolbar,
+  .cupons-panel {
+    border-radius: 20px;
   }
 
-  .sidebar.sidebar-open {
-    transform: translateX(0);
+  .cupons-empty {
+    min-height: 300px;
   }
 
-  .sidebar-overlay {
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 125;
-    background: rgba(0, 0, 0, 0.35);
-  }
-
-  .sidebar-mobile-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-  }
-
-  .sidebar-close-button {
-    display: grid;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 999px;
-    background: #000000;
-    color: #ffffff;
-    font-size: 24px;
-    line-height: 1;
+  .cupons-empty h3 {
+    font-size: 26px;
   }
 }
