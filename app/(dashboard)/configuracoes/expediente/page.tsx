@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-
+import { useToast } from "@/components/ui/toast-provider";
 import {
   createBreakTime,
   deleteBreakTime,
@@ -23,16 +23,34 @@ type Profile = {
 };
 
 const DAYS = [
-  { id: 1, label: "Segunda-feira" },
-  { id: 2, label: "Terça-feira" },
-  { id: 3, label: "Quarta-feira" },
-  { id: 4, label: "Quinta-feira" },
-  { id: 5, label: "Sexta-feira" },
-  { id: 6, label: "Sábado" },
-  { id: 0, label: "Domingo" },
+  { id: 1, label: "Segunda-feira", short: "Seg" },
+  { id: 2, label: "Terça-feira", short: "Ter" },
+  { id: 3, label: "Quarta-feira", short: "Qua" },
+  { id: 4, label: "Quinta-feira", short: "Qui" },
+  { id: 5, label: "Sexta-feira", short: "Sex" },
+  { id: 6, label: "Sábado", short: "Sáb" },
+  { id: 0, label: "Domingo", short: "Dom" },
 ];
 
+function sortByWeekOrder<T extends { dia_semana: number }>(items: T[]) {
+  const order = [1, 2, 3, 4, 5, 6, 0];
+
+  return [...items].sort((a, b) => {
+    const dayDiff = order.indexOf(a.dia_semana) - order.indexOf(b.dia_semana);
+
+    if (dayDiff !== 0) return dayDiff;
+
+    if ("hora_inicio" in a && "hora_inicio" in b) {
+      return String(a.hora_inicio).localeCompare(String(b.hora_inicio));
+    }
+
+    return 0;
+  });
+}
+
 export default function ExpedientePage() {
+  const { showToast } = useToast();
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
   const [breakTimes, setBreakTimes] = useState<BreakTime[]>([]);
@@ -49,35 +67,43 @@ export default function ExpedientePage() {
   async function loadData() {
     setLoading(true);
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (!session) {
+      if (!session) {
+        setLoading(false);
+        return;
+      }
+
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("nome, email, avatar_url")
+        .eq("id", session.user.id)
+        .single();
+
+      setProfile({
+        nome: profileData?.nome ?? session.user.email ?? "Profissional",
+        email: profileData?.email ?? session.user.email ?? null,
+        avatar_url: profileData?.avatar_url ?? null,
+      });
+
+      const [hoursData, breaksData] = await Promise.all([
+        listMyWorkingHours(),
+        listMyBreakTimes(),
+      ]);
+
+      setWorkingHours(sortByWeekOrder(hoursData as WorkingHour[]));
+      setBreakTimes(sortByWeekOrder(breaksData as BreakTime[]));
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Erro ao carregar expediente.",
+        "error",
+      );
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("nome, email, avatar_url")
-      .eq("id", session.user.id)
-      .single();
-
-    setProfile({
-      nome: profileData?.nome ?? session.user.email ?? "Profissional",
-      email: profileData?.email ?? session.user.email ?? null,
-      avatar_url: profileData?.avatar_url ?? null,
-    });
-
-    const [hoursData, breaksData] = await Promise.all([
-      listMyWorkingHours(),
-      listMyBreakTimes(),
-    ]);
-
-    setWorkingHours(hoursData as WorkingHour[]);
-    setBreakTimes(breaksData as BreakTime[]);
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -88,8 +114,12 @@ export default function ExpedientePage() {
     return workingHours.find((item) => item.dia_semana === day);
   }
 
-  function getBreakDayLabel(day: number) {
+  function getDayLabel(day: number) {
     return DAYS.find((item) => item.id === day)?.label ?? "Dia";
+  }
+
+  function getDayShort(day: number) {
+    return DAYS.find((item) => item.id === day)?.short ?? "Dia";
   }
 
   function normalizeTime(time: string | null | undefined, fallback: string) {
@@ -113,16 +143,16 @@ export default function ExpedientePage() {
 
       setWorkingHours((prev) => {
         const filtered = prev.filter((item) => item.dia_semana !== day);
-
-        return [...filtered, updated as WorkingHour].sort(
-          (a, b) => a.dia_semana - b.dia_semana,
-        );
+        return sortByWeekOrder([...filtered, updated as WorkingHour]);
       });
+
+      showToast(ativo ? "Expediente ativado" : "Expediente inativado", "success");
     } catch (error) {
-      alert(
+      showToast(
         error instanceof Error
           ? error.message
           : "Erro ao atualizar expediente.",
+        "error",
       );
     } finally {
       setSavingDay(null);
@@ -153,7 +183,7 @@ export default function ExpedientePage() {
 
     setWorkingHours((prev) => {
       const filtered = prev.filter((item) => item.dia_semana !== day);
-      return [...filtered, draft].sort((a, b) => a.dia_semana - b.dia_semana);
+      return sortByWeekOrder([...filtered, draft]);
     });
   }
 
@@ -173,13 +203,14 @@ export default function ExpedientePage() {
 
       setWorkingHours((prev) => {
         const filtered = prev.filter((item) => item.dia_semana !== day);
-        return [...filtered, updated as WorkingHour].sort(
-          (a, b) => a.dia_semana - b.dia_semana,
-        );
+        return sortByWeekOrder([...filtered, updated as WorkingHour]);
       });
+
+      showToast(`${getDayLabel(day)} salvo com sucesso`, "success");
     } catch (error) {
-      alert(
+      showToast(
         error instanceof Error ? error.message : "Erro ao salvar expediente.",
+        "error",
       );
     } finally {
       setSavingDay(null);
@@ -188,7 +219,12 @@ export default function ExpedientePage() {
 
   async function handleCreateBreak() {
     if (!breakForm.hora_inicio || !breakForm.hora_fim) {
-      alert("Informe início e fim do intervalo.");
+      showToast("Informe início e fim do intervalo.", "error");
+      return;
+    }
+
+    if (breakForm.hora_inicio >= breakForm.hora_fim) {
+      showToast("O horário final deve ser maior que o inicial.", "error");
       return;
     }
 
@@ -202,15 +238,7 @@ export default function ExpedientePage() {
         motivo: breakForm.motivo || "Intervalo",
       });
 
-      setBreakTimes((prev) =>
-        [...prev, created as BreakTime].sort((a, b) => {
-          if (a.dia_semana !== b.dia_semana) {
-            return a.dia_semana - b.dia_semana;
-          }
-
-          return a.hora_inicio.localeCompare(b.hora_inicio);
-        }),
-      );
+      setBreakTimes((prev) => sortByWeekOrder([...prev, created as BreakTime]));
 
       setBreakForm({
         dia_semana: 1,
@@ -218,9 +246,12 @@ export default function ExpedientePage() {
         hora_fim: "",
         motivo: "Intervalo",
       });
+
+      showToast("Intervalo adicionado com sucesso", "success");
     } catch (error) {
-      alert(
+      showToast(
         error instanceof Error ? error.message : "Erro ao criar intervalo.",
+        "error",
       );
     } finally {
       setSavingBreak(false);
@@ -233,12 +264,16 @@ export default function ExpedientePage() {
     try {
       await deleteBreakTime(id);
       setBreakTimes((prev) => prev.filter((item) => item.id !== id));
+      showToast("Intervalo removido com sucesso", "success");
     } catch (error) {
-      alert(
+      showToast(
         error instanceof Error ? error.message : "Erro ao remover intervalo.",
+        "error",
       );
     }
   }
+
+  const activeDays = workingHours.filter((item) => item.ativo).length;
 
   if (loading) {
     return <LoadingSpinner />;
@@ -254,9 +289,10 @@ export default function ExpedientePage() {
         <div className="expediente-toolbar">
           <div>
             <p className="expediente-eyebrow">Configurações</p>
-            <h2>Expediente e intervalos</h2>
+            <h2>Expediente</h2>
             <span>
-              Defina dias de atendimento, horários disponíveis e pausas.
+              {activeDays} dias ativos · {breakTimes.length} intervalos
+              cadastrados
             </span>
           </div>
         </div>
@@ -286,7 +322,7 @@ export default function ExpedientePage() {
                   <div className="expediente-card-header">
                     <div>
                       <h4>{day.label}</h4>
-                      <span>{isActive ? "Ativo" : "Inativo"}</span>
+                      <span>{isActive ? "Aberto" : "Fechado"}</span>
                     </div>
 
                     <label className="expediente-switch">
@@ -308,7 +344,7 @@ export default function ExpedientePage() {
                       <input
                         type="time"
                         value={normalizeTime(current?.hora_inicio, "08:00")}
-                        disabled={!isActive}
+                        disabled={!isActive || savingDay === day.id}
                         onChange={(e) =>
                           updateWorkingHourDraft(
                             day.id,
@@ -324,7 +360,7 @@ export default function ExpedientePage() {
                       <input
                         type="time"
                         value={normalizeTime(current?.hora_fim, "18:00")}
-                        disabled={!isActive}
+                        disabled={!isActive || savingDay === day.id}
                         onChange={(e) =>
                           updateWorkingHourDraft(
                             day.id,
@@ -358,61 +394,73 @@ export default function ExpedientePage() {
           </div>
 
           <div className="break-form">
-            <select
-              value={breakForm.dia_semana}
-              onChange={(e) =>
-                setBreakForm((prev) => ({
-                  ...prev,
-                  dia_semana: Number(e.target.value),
-                }))
-              }
-            >
-              {DAYS.map((day) => (
-                <option key={day.id} value={day.id}>
-                  {day.label}
-                </option>
-              ))}
-            </select>
+            <label>
+              Dia
+              <select
+                value={breakForm.dia_semana}
+                onChange={(e) =>
+                  setBreakForm((prev) => ({
+                    ...prev,
+                    dia_semana: Number(e.target.value),
+                  }))
+                }
+              >
+                {DAYS.map((day) => (
+                  <option key={day.id} value={day.id}>
+                    {day.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-            <input
-              type="time"
-              value={breakForm.hora_inicio}
-              onChange={(e) =>
-                setBreakForm((prev) => ({
-                  ...prev,
-                  hora_inicio: e.target.value,
-                }))
-              }
-            />
+            <label>
+              Início
+              <input
+                type="time"
+                value={breakForm.hora_inicio}
+                onChange={(e) =>
+                  setBreakForm((prev) => ({
+                    ...prev,
+                    hora_inicio: e.target.value,
+                  }))
+                }
+              />
+            </label>
 
-            <input
-              type="time"
-              value={breakForm.hora_fim}
-              onChange={(e) =>
-                setBreakForm((prev) => ({
-                  ...prev,
-                  hora_fim: e.target.value,
-                }))
-              }
-            />
+            <label>
+              Fim
+              <input
+                type="time"
+                value={breakForm.hora_fim}
+                onChange={(e) =>
+                  setBreakForm((prev) => ({
+                    ...prev,
+                    hora_fim: e.target.value,
+                  }))
+                }
+              />
+            </label>
 
-            <input
-              value={breakForm.motivo}
-              onChange={(e) =>
-                setBreakForm((prev) => ({
-                  ...prev,
-                  motivo: e.target.value,
-                }))
-              }
-              placeholder="Motivo do intervalo"
-            />
+            <label>
+              Motivo
+              <input
+                value={breakForm.motivo}
+                onChange={(e) =>
+                  setBreakForm((prev) => ({
+                    ...prev,
+                    motivo: e.target.value,
+                  }))
+                }
+                placeholder="Ex: Almoço"
+              />
+            </label>
 
             <button
               type="button"
               onClick={handleCreateBreak}
               disabled={savingBreak}
             >
-              {savingBreak ? "Salvando..." : "Adicionar intervalo"}
+              {savingBreak ? "Salvando..." : "Adicionar"}
             </button>
           </div>
 
@@ -421,9 +469,13 @@ export default function ExpedientePage() {
           ) : (
             <div className="break-list">
               {breakTimes.map((item) => (
-                <div className="break-item" key={item.id}>
-                  <div>
-                    <strong>{getBreakDayLabel(item.dia_semana)}</strong>
+                <article className="break-item" key={item.id}>
+                  <div className="break-day-badge">
+                    {getDayShort(item.dia_semana)}
+                  </div>
+
+                  <div className="break-content">
+                    <strong>{getDayLabel(item.dia_semana)}</strong>
                     <span>
                       {item.hora_inicio.slice(0, 5)} -{" "}
                       {item.hora_fim.slice(0, 5)} · {item.motivo ?? "Intervalo"}
@@ -436,7 +488,7 @@ export default function ExpedientePage() {
                   >
                     Remover
                   </button>
-                </div>
+                </article>
               ))}
             </div>
           )}
