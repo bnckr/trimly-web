@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/header";
 import { getMyProfile, updateMyProfile, uploadAvatar } from "@/actions/profile";
 import "./perfil.css";
 import { Toast } from "@/components/ui/toast";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export default function PerfilPage() {
   const [profile, setProfile] = useState<any>(null);
@@ -80,7 +81,7 @@ export default function PerfilPage() {
     }));
   }
 
-  if (loading) return <div>Carregando...</div>;
+  if (loading) return <LoadingSpinner />;
 
   return (
     <main className="perfil-shell">

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { ServiceModal } from '@/components/servicos/service-modal'
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 type Profile = {
   nome: string
@@ -110,7 +111,7 @@ export default function ServicosPage() {
   }
 
   if (loading) {
-    return <main className="servicos-loading">Carregando serviços...</main>
+    return <LoadingSpinner />;
   }
 
   return (

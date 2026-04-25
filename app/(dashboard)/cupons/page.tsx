@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { CouponModal } from '@/components/cupons/coupon-modal'
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import {
   activateCoupon,
   deactivateCoupon,
@@ -106,7 +107,7 @@ export default function CuponsPage() {
   }
 
   if (loading) {
-    return <main className="cupons-loading">Carregando cupons...</main>
+    return <LoadingSpinner />;
   }
 
   return (

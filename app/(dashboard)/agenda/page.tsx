@@ -8,6 +8,7 @@ import { Header } from "@/components/layout/header";
 import { AppointmentModal } from "@/components/agenda/appointment-modal";
 import { BlockTimeModal } from "@/components/agenda/block-time-modal";
 import { EventDetailsModal } from "@/components/agenda/event-details-modal";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 type Profile = {
   nome: string;
@@ -501,7 +502,7 @@ export default function AgendaPage() {
   }
 
   if (loading) {
-    return <main className="agenda-loading">Carregando agenda...</main>;
+    return <LoadingSpinner />;
   }
 
   return (

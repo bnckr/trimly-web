@@ -10,8 +10,6 @@ import {
 import type { AppointmentPayment, PaymentMethod } from "@/types/payment";
 import { useToast } from "@/components/ui/toast-provider";
 
-const { showToast } = useToast();
-
 type PaymentModalEvent = {
   id: string;
   cliente_id?: string | null;
@@ -54,6 +52,7 @@ export function PaymentModal({
   onClose,
   onSaved,
 }: PaymentModalProps) {
+  const { showToast } = useToast();
   const [formaPagamento, setFormaPagamento] = useState<PaymentMethod>("pix");
   const [taxaPercentual, setTaxaPercentual] = useState("0");
   const [parcelas, setParcelas] = useState("2");

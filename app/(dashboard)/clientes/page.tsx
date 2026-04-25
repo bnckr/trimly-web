@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { ClientModal } from '@/components/clientes/client-modal'
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 type Profile = {
   nome: string
@@ -116,7 +117,7 @@ export default function ClientesPage() {
   }
 
   if (loading) {
-    return <main className="clientes-loading">Carregando clientes...</main>
+    return <LoadingSpinner />;
   }
 
   return (

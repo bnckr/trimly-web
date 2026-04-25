@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+
 import {
   createBreakTime,
   deleteBreakTime,
@@ -239,7 +241,7 @@ export default function ExpedientePage() {
   }
 
   if (loading) {
-    return <main className="expediente-loading">Carregando expediente...</main>;
+    return <LoadingSpinner />;
   }
 
   return (

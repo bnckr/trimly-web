@@ -11,8 +11,6 @@ import {
 } from "@/actions/coupons";
 import { useToast } from "@/components/ui/toast-provider";
 
-const { showToast } = useToast();
-
 type Client = {
   id: string;
   nome: string;
@@ -111,6 +109,7 @@ export function AppointmentModal({
   onClose,
   onSaved,
 }: AppointmentModalProps) {
+  const { showToast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [dayEvents, setDayEvents] = useState<ConflictEvent[]>([]);

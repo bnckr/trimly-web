@@ -12,14 +12,13 @@ type CouponModalProps = {
   onSaved: () => void | Promise<void>;
 };
 
-const { showToast } = useToast();
-
 export function CouponModal({
   open,
   coupon,
   onClose,
   onSaved,
 }: CouponModalProps) {
+  const { showToast } = useToast();
   const [nomeCupom, setNomeCupom] = useState("");
   const [percentualDesconto, setPercentualDesconto] = useState("");
   const [ativo, setAtivo] = useState(true);

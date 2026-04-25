@@ -318,3 +318,14 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 980px) {
+  .expediente-main {
+    padding-top: 78px;
+  }
+
+  .expediente-grid,
+  .break-form {
+    grid-template-columns: 1fr;
+  }
+}

@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 type Profile = {
   nome: string;
@@ -174,7 +175,7 @@ export default function DashboardPage() {
 
       const professionalId = selectedProfessionalId || session.user.id;
       const range = getDateRange(selectedDate, filterType);
-      const today = getToday();
+      const selectedDay = selectedDate;
 
       const { data: profileData } = await supabase
         .from("profiles")
@@ -211,8 +212,8 @@ export default function DashboardPage() {
         .from("appointment_payments")
         .select("valor_liquido_colaborador, pago_em")
         .eq("profissional_id", professionalId)
-        .gte("pago_em", `${today}T00:00:00`)
-        .lte("pago_em", `${today}T23:59:59`);
+        .gte("pago_em", `${selectedDay}T00:00:00`)
+        .lte("pago_em", `${selectedDay}T23:59:59`);
 
       const { data: agendaData } = await supabase
         .from("v_agenda_unificada")
@@ -328,7 +329,7 @@ export default function DashboardPage() {
   );
 
   if (loading) {
-    return <main className="dashboard-loading">Carregando Trimly...</main>;
+    return <LoadingSpinner />;
   }
 
   return (

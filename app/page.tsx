@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export default function HomePage() {
   const router = useRouter()
@@ -23,5 +24,5 @@ export default function HomePage() {
     checkSession()
   }, [router])
 
-  return <div style={{ padding: 24 }}>Carregando...</div>
+  return <LoadingSpinner />;
 }
